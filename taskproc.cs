@@ -25,6 +25,18 @@ namespace Power.SPMEMS.Services
 {
     class taskproc
     {
+        public string SelProjDZ1(string EpsProjCode)
+        {
+            string POSID = "";
+            XCode.DataAccessLayer.DAL dal = XCode.DataAccessLayer.DAL.Create();
+            string sSQL = "select * from NPS_INV_ProjectContrast where YPC_POSID='" + EpsProjCode + "' ";
+            DataTable CwData = XCode.DataAccessLayer.DAL.QuerySQL(sSQL);
+            if (CwData.Rows.Count > 0)
+            {
+                POSID = CwData.Rows[0]["POSID"].ToString() + "|" + CwData.Rows[0]["POST1"].ToString();
+            }
+            return POSID;
+        }
 
         public string SelProjDZ(string EpsProjCode)
         {

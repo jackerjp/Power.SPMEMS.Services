@@ -1,0 +1,169 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{D6D6BC3A-D719-44DA-8B6E-03C83E9A4BE9}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Power.SPMEMS.Services</RootNamespace>
+    <AssemblyName>Power.SPMEMS.Services</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\Bin\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Cron">
+      <HintPath>C:\Users\Jp\Desktop\CronNET-master\CronNET\bin\Release\Cron.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="NewLife.Core, Version=8.11.8029.16674, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\NewLife.Core.8.11.2021.1225\lib\net46\NewLife.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\GTIPS8\DEFAULT\GTIPS8-NET\Components\MyWebService\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Power.Business, Version=1.0.0.4419, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>C:\Users\Jp\Desktop\Power.Business.dll</HintPath>
+    </Reference>
+    <Reference Include="Power.Cache">
+      <HintPath>..\bin\Power.Cache.dll</HintPath>
+    </Reference>
+    <Reference Include="Power.Configure">
+      <HintPath>..\bin\Power.Configure.dll</HintPath>
+    </Reference>
+    <Reference Include="Power.Controls">
+      <HintPath>C:\Users\Jp\Desktop\Power.Controls.dll</HintPath>
+    </Reference>
+    <Reference Include="Power.Controls.StdPlan">
+      <HintPath>..\bin\Power.Controls.StdPlan.dll</HintPath>
+    </Reference>
+    <Reference Include="Power.Global">
+      <HintPath>..\bin\Power.Global.dll</HintPath>
+    </Reference>
+    <Reference Include="Power.Service">
+      <HintPath>..\bin\Power.Service.dll</HintPath>
+    </Reference>
+    <Reference Include="Power.Service.PlanService">
+      <HintPath>..\bin\Power.Service.PlanService.dll</HintPath>
+    </Reference>
+    <Reference Include="Power.Service.SendMessages">
+      <HintPath>..\..\Power.Service.SendMessages.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Runtime.Serialization.Primitives, Version=4.1.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>packages\System.Runtime.Serialization.Primitives.4.3.0\lib\net46\System.Runtime.Serialization.Primitives.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="XCode, Version=8.9.7577.20736, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\TestPower\PowerPMS\bin\XCode.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DBService.cs" />
+    <Compile Include="Models\NPS_PUR_EPCEquipInOutCount.cs" />
+    <Compile Include="Models\CMEMPMST.cs" />
+    <Compile Include="Models\DCAREAMST.cs" />
+    <Compile Include="Models\DCAREATYPMST.cs" />
+    <Compile Include="Models\DCPRJJDMST.cs" />
+    <Compile Include="Models\DCPROJECTMST.cs" />
+    <Compile Include="Models\DCSKLMST.cs" />
+    <Compile Include="Models\DCTASKMENUMST.cs" />
+    <Compile Include="Models\DCWTDURLIN.cs" />
+    <Compile Include="Models\DCWTDURMST.cs" />
+    <Compile Include="Models\DCWTRECLIN.cs" />
+    <Compile Include="Models\DCWTRECMST.cs" />
+    <Compile Include="Models\DCWTTYPMST.cs" />
+    <Compile Include="Models\NPS_BID_Integrated.cs" />
+    <Compile Include="Models\NPS_BID_Ratio.cs" />
+    <Compile Include="Models\NPS_BID_StatusTable.cs" />
+    <Compile Include="Models\NPS_DES_ArtificialTime.cs" />
+    <Compile Include="Models\NPS_DES_HumanTime.cs" />
+    <Compile Include="Models\NPS_DES_ProjInfo.cs" />
+    <Compile Include="Models\NPS_PUR_EquipArrive.cs" />
+    <Compile Include="Models\NPS_PUR_MatInventory.cs" />
+    <Compile Include="Models\NPS_PUR_MatVerificationBook.cs" />
+    <Compile Include="Models\NPS_PUR_PurBook.cs" />
+    <Compile Include="Models\NPS_PUR_SubcontEquipInOut.cs" />
+    <Compile Include="Models\NPS_PUR_SubcontEquipInOutTwo.cs" />
+    <Compile Include="Models\NPS_PUR_SubcontVerificationBook.cs" />
+    <Compile Include="Models\OGCRWMST.cs" />
+    <Compile Include="Models\OGCSTMST.cs" />
+    <Compile Include="Models\PLN_project.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="taskproc.cs" />
+    <Compile Include="TQ.cs" />
+    <Compile Include="TQBYJYSCode.cs" />
+    <Compile Include="TQYScode.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="Entity\Build.log">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Build.tt</DependentUpon>
+    </None>
+    <None Include="Entity\Build_netcore.log">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Build_netcore.tt</DependentUpon>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Entity\Build.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Build.log</LastGenOutput>
+    </Content>
+    <Content Include="Entity\Build_netcore.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Build_netcore.log</LastGenOutput>
+    </Content>
+    <Content Include="Entity\Model.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

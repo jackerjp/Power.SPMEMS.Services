@@ -1,0 +1,30 @@
+D:\项目\综合管理平台\Power.SPMEMS.Services\bin\Debug\Power.SPMEMS.Services.exe.config
+D:\项目\综合管理平台\Power.SPMEMS.Services\bin\Debug\Power.SPMEMS.Services.exe
+D:\项目\综合管理平台\Power.SPMEMS.Services\bin\Debug\Power.SPMEMS.Services.pdb
+D:\项目\综合管理平台\Power.SPMEMS.Services\bin\Debug\Dos.ORM.dll
+D:\项目\综合管理平台\Power.SPMEMS.Services\bin\Debug\Newtonsoft.Json.dll
+D:\项目\综合管理平台\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.csprojAssemblyReference.cache
+D:\项目\综合管理平台\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.csproj.CoreCompileInputs.cache
+D:\项目\综合管理平台\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.csproj.CopyComplete
+D:\项目\综合管理平台\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.exe
+D:\项目\综合管理平台\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.pdb
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\bin\Debug\Power.SPMEMS.Services.exe.config
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\bin\Debug\Power.SPMEMS.Services.exe
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\bin\Debug\Power.SPMEMS.Services.pdb
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\bin\Debug\Newtonsoft.Json.dll
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\bin\Debug\System.Runtime.Serialization.Primitives.dll
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.csproj.CoreCompileInputs.cache
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.csproj.CopyComplete
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.exe
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.pdb
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\obj\Debug\Power.SPMEMS.Services.csprojAssemblyReference.cache
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services\bin\Debug\Oracle.ManagedDataAccess.dll
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services - SPM\bin\Debug\Power.SPMEMS.Services.exe.config
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services - SPM\bin\Debug\Power.SPMEMS.Services.exe
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services - SPM\bin\Debug\Power.SPMEMS.Services.pdb
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services - SPM\bin\Debug\Newtonsoft.Json.dll
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services - SPM\bin\Debug\System.Runtime.Serialization.Primitives.dll
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services - SPM\obj\Debug\Power.SPMEMS.Services.csproj.CoreCompileInputs.cache
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services - SPM\obj\Debug\Power.SPMEMS.Services.csproj.CopyComplete
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services - SPM\obj\Debug\Power.SPMEMS.Services.exe
+E:\Projects\Power.SPMEMS.Services\Power.SPMEMS.Services - SPM\obj\Debug\Power.SPMEMS.Services.pdb

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,344 +9,1329 @@ namespace Power.SPMEMS.Services
 {
     class TQYScode
     {
-        public DataTable StatisticLeftUp(string Year)
+
+        //将项目专业产值支取模块中的本次支取产值和本次支取比例根据wbsid更新到对应专业施工图产值分解
+        public string UpThreeCZFJBouns(string ID)
         {
-            string SQL = @"select * from (
-                                select '累计收入合同额' as Name,sum(isnull(ConMoney,0)) as Money,'-'  percentage,Year(SignDate) as year from NPS_CON_RevenueContract where (Status='35' or Status='50') group by Year(SignDate)
-                                union all
-                                select '累计应付信息费' as Name,sum(isnull(B.InfoFee,0)) as Money,
-                                case when sum(isnull(A.ConMoney,0))=0 then '0' else cast(ROUND(isnull(sum(isnull(B.InfoFee,0)),0)/sum(isnull(A.ConMoney,0)),2)*100 as nvarchar) + '%' end percentage,A.year
-                                from (select sum(isnull(ConMoney,0)) as ConMoney,Year(SignDate) as year,ConEpsCode from NPS_CON_RevenueContract where (Status='35' or Status='50')  group by Year(SignDate),ConEpsCode ) A
-                                left join (select sum(isnull(InfoFee,0)) as InfoFee,Year(RegDate) as year,ConCode from NPS_CON_CloseApplicatio where (Status='35' or Status='50') group by Year(RegDate),ConCode) B on A.ConEpsCode=B.ConCode
-                                group by A.year
-                                union all
-                                select '累计应付私退款' as Name,sum(isnull(B.PrivRefund,0)) as Money,
-                                case when sum(isnull(A.ConMoney,0))=0 then '0' else cast(ROUND(isnull(sum(isnull(B.PrivRefund,0)),0)/sum(isnull(A.ConMoney,0)),2)*100 as nvarchar) + '%' end percentage,A.year
-                                from (select sum(isnull(ConMoney,0)) as ConMoney,Year(SignDate) as year,ConEpsCode from NPS_CON_RevenueContract where (Status='35' or Status='50')  group by Year(SignDate),ConEpsCode) A
-                                left join (select sum(isnull(PrivRefund,0)) as PrivRefund,Year(RegDate) as year,ConCode from NPS_CON_CloseApplicatio where (Status='35' or Status='50')  group by Year(RegDate),ConCode) B on A.ConEpsCode=B.ConCode
-                                group by A.year
-                                union all
-                                select '累计实际收入' as Name,sum(isnull(A.ConMoney,0)) - sum(isnull(B.PrivRefund,0)) - sum(isnull(B.InfoFee,0)) as Money,
-                                case when sum(isnull(A.ConMoney,0))=0 then '0' else
-                                    cast(ROUND(isnull(sum(isnull(A.ConMoney,0)) - sum(isnull(B.PrivRefund,0)) - sum(isnull(B.InfoFee,0)),0)/sum(isnull(A.ConMoney,0)),2)*100 as nvarchar) + '%' end percentage,A.year
-                                from (select sum(isnull(ConMoney,0)) as ConMoney,Year(SignDate) as year,ConEpsCode from NPS_CON_RevenueContract where (Status='35' or Status='50')  group by Year(SignDate),ConEpsCode) A
-                                left join (select sum(isnull(PrivRefund,0)) as PrivRefund,sum(isnull(InfoFee,0)) as InfoFee,Year(RegDate) as year,ConCode from NPS_CON_CloseApplicatio where  (Status='35' or Status='50') group by Year(RegDate),ConCode) B on A.ConEpsCode=B.ConCode
-                                group by A.year
-                            ) M
-                            where year='" + Year + "'";
-            DataTable Dt = XCode.DataAccessLayer.DAL.QuerySQL(SQL);
-            return Dt;//返回的查询结果
-        }
-        public DataTable StatisticLeftDown(string Year)
-        {
-            string SQL = @"select * from (
-                                select '累计收入合同额' as Name,sum(isnull(ConMoney,0)) as Money,'―'  percentage,Year(RegDate) as year from NPS_CON_RevenueContract where (Status=50 or Status=35) group by Year(RegDate)
-                                union all
-                                select '累计已收款' as Name,sum(isnull(B.ActRecMoney,0)) as Money,
-                                case when sum(isnull(A.ConMoney,0))=0 then '0' else cast(ROUND(isnull(sum(isnull(B.ActRecMoney,0)),0)/sum(isnull(A.ConMoney,0)),2)*100 as nvarchar) + '%' end percentage,A.year
-                                from (select sum(isnull(ConMoney,0)) as ConMoney,Year(RegDate) as year from NPS_CON_RevenueContract where (Status=50 or Status=35) group by Year(RegDate) ) A
-                                left join (select sum(isnull(ActRecMoney,0)) as ActRecMoney,Year(RegDate) as year from NPS_CON_ContractCollection where (Status=50 or Status=35) group by Year(RegDate)) B on A.year=B.year
-                                group by A.year
-                                union all
-                                select '累计应开票' as Name,sum(isnull(ConMoney,0)) as Money,'―'  percentage,A.year from
-                                    (select sum(isnull(N.ConMoney,0)) as ConMoney,YEAR(M.RegDate) as year from NPS_CON_CloseApplicatio M
-                                        left join NPS_CON_RevenueContract N on M.ConID=N.ID
-                                     where M.NotInvoice='0' and  (M.Status=50 or M.Status=35)
-                                     group by Year(M.RegDate)) A
-                                group by A.year
-                                union all
-                                select '累计已开票' as Name,sum(isnull(B.InvMoney,0)) as Money,
-                                case when sum(isnull(A.ConMoney,0))=0 then '0' else cast(ROUND(isnull(sum(isnull(B.InvMoney,0)),0)/sum(isnull(A.ConMoney,0)),2)*100 as nvarchar) + '%' end percentage,A.year from
-                                    (select sum(isnull(N.ConMoney,0)) as ConMoney,YEAR(M.RegDate) as year from NPS_CON_CloseApplicatio M
-                                        left join NPS_CON_RevenueContract N on M.ConID=N.ID
-                                     where M.NotInvoice='0' and (M.Status=50 or M.Status=35)
-                                     group by Year(M.RegDate)) A
-                                left join (select sum(isnull(InvMoney,0)) as InvMoney,Year(RegDate) as year from NPS_CON_ContractInvoiceApplication where  (Status=50 or Status=35) group by Year(RegDate)) B on A.year=B.year
-                                group by A.year
-                                union all
-                                select '累计应付信息费/私退款' as Name,sum(isnull(InfoFee,0)) as Money,'―' percentage,A.year from
-                                (select sum(isnull(InfoFee + PrivRefund,0)) as InfoFee,YEAR(RegDate) as year from NPS_CON_CloseApplicatio where NotInvoice='0' and  (Status=50 or Status=35) group by Year(RegDate)) A
-                                group by A.year
-                                union all
-                                select '累计已付信息费/私退款' as Name,sum(isnull(B.InfoFee,0)) as Money,
-                                  case when sum(isnull(A.InfoFee,0))=0 then '0' else cast(ROUND(isnull(sum(isnull(B.InfoFee,0)),0)/sum(isnull(A.InfoFee,0)),2)*100 as nvarchar) + '%' end percentage,A.year from
-                                    (select sum(isnull(InfoFee+PrivRefund,0)) as InfoFee,YEAR(RegDate) as year from NPS_CON_CloseApplicatio where NotInvoice='0' and (Status=50 or Status=35)  group by Year(RegDate)) A
-                                left join (select sum(isnull(CurrentInfoFee+CurrentPrivRefund,0)) as InfoFee,Year(RegDate) as year from NPS_CON_RevenueContract_OtherExpend where NotInvoice='0' and (Status=50 or Status=35) group by Year(RegDate)) B on A.year=B.year
-                                 group by A.year
-                                union all
-                                select '累计分包合同额' as Name,sum(isnull(SubConMoney,0)) as Money,'―'  percentage,Year(RegDate) as year from NPS_CON_Subcontract group by Year(RegDate)
-                                union all
-                                select '累计分包支付额' as Name,sum(isnull(B.PayMoney,0)) as Money,
-                                case when sum(isnull(A.SubConMoney,0))=0 then '0' else cast(ROUND(isnull(sum(isnull(B.PayMoney,0)),0)/sum(isnull(A.SubConMoney,0)),2)*100 as nvarchar) + '%' end percentage,A.year
-                                from (select sum(isnull(SubConMoney,0)) as SubConMoney,Year(RegDate) as year from NPS_CON_Subcontract group by Year(RegDate) ) A
-                                left join (select sum(isnull(PayMoney,0)) as PayMoney,Year(RegDate) as year from NPS_CON_PayApplication group by Year(RegDate)) B on A.year=B.year
-                                group by A.year
-                            ) P
-                            where year='" + Year + "'";
-            DataTable Dt = XCode.DataAccessLayer.DAL.QuerySQL(SQL);
-            return Dt;//返回的查询结果
-        }
-        public DataTable StatisticUp(string Year)
-        {
-            string SQL = @"select * from (
-                                select case when A.ConType='HJ' then '环境'
-                                            when A.ConType='QT' then '其他'
-                                            when A.ConType='ZW' then '职卫非煤'
-                                            when A.ConType='ZM' then '职卫煤矿' end ConType,isnull(A.ConMoney,0) as ConMoney,
-                                        case when isnull(B.ConMoney,0)=0 then '0' else cast(ROUND(isnull(isnull(A.ConMoney,0),0)/isnull(B.ConMoney,0),2)*100 as nvarchar) + '%' end percentage,
-                                        isnull(C.InfoFee,0) as InfoFee,isnull(C.PrivRefund,0) as PrivRefund,
-                                        isnull(A.ConMoney,0)-isnull(C.InfoFee,0)-isnull(C.PrivRefund,0) as ActSR,
-                                        case when isnull(isnull(B.ConMoney,0)-isnull(D.InfoFee,0)-isnull(D.PrivRefund,0),0)=0 then '0' else cast(ROUND(isnull(isnull(isnull(A.ConMoney,0)-isnull(C.InfoFee,0)-isnull(C.PrivRefund,0),0),0)/isnull(isnull(B.ConMoney,0)-isnull(D.InfoFee,0)-isnull(D.PrivRefund,0),0),2)*100 as nvarchar) + '%' end ActSRpercentage,
-                                        A.year
-                                 from
-                                (select Year(RegDate) as year,ConType,sum(isnull(ConMoney,0)) as ConMoney from NPS_CON_RevenueContract group by Year(RegDate),ConType) A
-                                --每年的收入合同总额
-                                left join (select Year(RegDate) as year,sum(isnull(ConMoney,0)) as ConMoney from NPS_CON_RevenueContract group by Year(RegDate)) B on A.year=B.year
-                                --每年的累计应付信息费、私退款总额
-                                left join (select sum(isnull(InfoFee,0)) as InfoFee,sum(isnull(PrivRefund,0)) as PrivRefund,Year(RegDate) as year from NPS_CON_CloseApplicatio group by Year(RegDate)) D on A.year=D.year
-                                --累计每年累计应付信息费、私退款
-                                left join (
-                                    select sum(isnull(InfoFee,0)) as InfoFee,sum(isnull(PrivRefund,0)) as PrivRefund,Year(M.RegDate) as year,N.ConType from NPS_CON_CloseApplicatio M
-                                    left join NPS_CON_RevenueContract N on M.ConID=N.ID where M.NotInvoice='0' group by Year(M.RegDate),N.ConType
-                                ) C on A.year=C.year and A.ConType=C.ConType
-                                union all
-                                select '总计' ConType,isnull(A.ConMoney,0) as ConMoney,
-                                        case when isnull(B.ConMoney,0)=0 then '-' else '-' end percentage,
-                                        C.InfoFee,C.PrivRefund,
-                                        A.ConMoney-C.InfoFee-C.PrivRefund as ActSR,
-                                        case when isnull(B.ConMoney-D.InfoFee-D.PrivRefund,0)=0 then '-' else '-' end ActSRpercentage,
-                                        A.year
-                                from
-                                (select Year(RegDate) as year,sum(isnull(ConMoney,0)) as ConMoney from NPS_CON_RevenueContract group by Year(RegDate)) A
-                                --每年的收入合同总额
-                                left join (select Year(RegDate) as year,sum(isnull(ConMoney,0)) as ConMoney from NPS_CON_RevenueContract group by Year(RegDate)) B on A.year=B.year
-                                --每年的累计应付信息费、私退款总额
-                                left join (select sum(isnull(InfoFee,0)) as InfoFee,sum(isnull(PrivRefund,0)) as PrivRefund,Year(RegDate) as year from NPS_CON_CloseApplicatio group by Year(RegDate)) D on A.year=D.year
-                                --累计每年累计应付信息费、私退款
-                                left join (
-                                    select sum(isnull(InfoFee,0)) as InfoFee,sum(isnull(PrivRefund,0)) as PrivRefund,Year(M.RegDate) as year from NPS_CON_CloseApplicatio M
-                                    left join NPS_CON_RevenueContract N on M.ConID=N.ID where M.NotInvoice='0' group by Year(M.RegDate)
-                                ) C on A.year=C.year
-                            ) LL
-                            where year='" + Year + "'";
-            DataTable Dt = XCode.DataAccessLayer.DAL.QuerySQL(SQL);
-            return Dt;//返回的查询结果
-        }
-        public string GetConEpsCode(string ConCode, string ProjectNature, string ConType, string SignYear)
-        {
-            string Code = "";
-            XCode.DataAccessLayer.DAL dal = XCode.DataAccessLayer.DAL.Create();
-            string Sql = "select * from NPS_CON_RevenueContract A where A.ConType='" + ConType + "' and A.ConEpsCode like '%" + SignYear + "%' and A.ConEpsCode like '%" + ProjectNature + "%' Order by RIGHT(A.ConEpsCode,6)  desc";
-            System.Data.DataTable Dt = dal.Session.Query(Sql).Tables[0];
-            if (Dt.Rows.Count > 0)
+            //根据项目专业产值支取的id找到项目人员分解明细的明细记录，根据明细记录中的wbsid找到对应专业施工图产值分解
+            XCode.DataAccessLayer.DAL dal1 = XCode.DataAccessLayer.DAL.Create();
+            string sql1 = "";
+            sql1 = "select sum(Bonus) as Bonus,WBSID from NPS_DES_ProjectOutputGrant_HumList_SubDetail where fid='" + ID + "'  group by WBSID ";
+            System.Data.DataTable dt1 = dal1.Session.Query(sql1).Tables[0];
+            for (int x = 0; x < dt1.Rows.Count; x++)//这是每一个wbsid的本次支取产值的和
             {
-                string LastCode = Dt.Rows[0]["ConEpsCode"].ToString().Split("-")[4];
-                Code = ConCode + "-" + ProjectNature + (Convert.ToInt32(LastCode.Split(ProjectNature)[0].Split("】")[0]) + 1).ToString().PadLeft(3, '0') + "】";
-            }
-            else
-            {
-                Code = ConCode + "-" + ProjectNature + "001" + "】";
-            }
-            return Code;
-        }
-
-        public DataTable ReslutData1(string KeyWord, string KeyValue)
-        {
-
-            DataTable tempFile = new DataTable();
-            //解码二进制数组
-            DataSet ds = Power.Global.PowerGlobal.Office.ExcelToDataSet("C:\\导入文件2.xlsx");
-            //tempFile = GetExcelDatatable(AppDomain.CurrentDomain.BaseDirectory + "\\" + docfile.Name + docfile.FileExt, "dt1");
-            tempFile = ds.Tables[0];
-            return tempFile;
-        }
-
-
-
-        //导入收入合同
-        public string ImportExcelContract(string KeyWord, string KeyValue, string Id)
-        {
-            XCode.DataAccessLayer.DAL dal = XCode.DataAccessLayer.DAL.Create();
-            System.Data.DataTable ImportData = ReslutData1(KeyWord, KeyValue);
-            if (ImportData.Rows.Count > 0)
-            {
-                foreach (DataRow row in ImportData.Rows)
+                NewLife.Log.XTrace.WriteLine("是否执行此方法1");
+                Power.Business.IBusinessOperate Sb = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ThreeDimensional_ListS");
+                Power.Business.IBusinessList SbList2 = Sb.FindAll(" WBSID = '" + dt1.Rows[x]["WBSID"].ToString() + "' ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);//根据wbsid找到专业施工图产值分解累加到已支取产值中
+                if (SbList2.Count > 0)
                 {
-                    Power.Business.IBusinessOperate BO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_CON_RevenueContract");
-                    Power.Business.IBusinessList BOList = BO.FindAll("ConCode='" + row["合同编号"] + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
-                    //主表
-                    Power.Business.IBaseBusiness mainList = Power.Business.BusinessFactory.CreateBusiness("NPS_CON_RevenueContract");
-                    mainList.SetItem("ID", Guid.NewGuid());
-                    mainList.SetItem("ConCode", row["合同编号"]);
-                    mainList.SetItem("ConName", row["合同名称"]);
-                    mainList.SetItem("ProjCode", row["项目编号"]);
-                    mainList.SetItem("ProjName", row["项目名称"]);
-                    mainList.SetItem("ConType", row["合同类型"]);
-                    mainList.SetItem("ProjectNature", row["项目性质"]);
-                    mainList.SetItem("ConEpsCode", row["立项项目/性质合同编号"]);
-                    mainList.SetItem("ConEpsName", row["立项项目/性质合同名称"]);
-                    mainList.SetItem("ConMoney", row["合同金额"]);
-                    mainList.SetItem("SupConMoney", row["补充合同金额"]);
-                    mainList.SetItem("ConTotMoney", row["合同总金额"]);
-                    mainList.SetItem("SignDate", row["签订日期"]);
-                    mainList.SetItem("PartyA", row["甲方单位"]);
-                    mainList.SetItem("PartyAAddress", row["甲方地址"]);
-                    mainList.SetItem("PartyAAgent", row["甲方经办人"]);
-                    mainList.SetItem("PartyATelephone", row["甲方电话"]);
-                    mainList.SetItem("PartyB", row["乙方单位"]);
-                    Power.Business.IBusinessOperate Unit = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_CON_UnitRegistration");
-                    Power.Business.IBusinessList UnitList = Unit.FindAll("CompanyName='" + row["乙方单位"] + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
-                    if (UnitList.Count > 0)
+                    NewLife.Log.XTrace.WriteLine("是否执行此方法2");
+                    for (int j = 0; j < SbList2.Count; j++)
                     {
-                        mainList.SetItem("PartyBID", UnitList[0]["ID"]);
+                        double dPayBonus = 0, dBonus = 0;
+                        string StatusCode = "";
+                        if (SbList2[j]["StatusCode"] == null)
+                            StatusCode = "";
+                        else
+                            StatusCode = SbList2[j]["StatusCode"].ToString();
+                        if (SbList2[j]["PayBonus"] == null)
+                            dPayBonus = 0;
+                        else
+                            dPayBonus = double.Parse(SbList2[j]["PayBonus"].ToString());
+                        if (dt1.Rows[x]["Bonus"] == null)
+                            dBonus = 0;
+                        else
+                            dBonus = double.Parse(dt1.Rows[x]["Bonus"].ToString());
+
+                        string PayBonus = (dPayBonus + dBonus).ToString();
+                        //SbList2[j]["PayBonus"] = double.Parse(SbList2[j]["PayBonus"].ToString()) + double.Parse(dt1.Rows[x]["Bonus"].ToString());//回写支取时产值
+                        if (dBonus < dPayBonus)
+                        {
+                            SbList2[j]["StatusCode"] = "超额支取";
+                            sql1 = "";
+                            sql1 = "update NPS_DES_ThreeDimensional_ListS set StatusCode = '超额支取' where WBSID='" + dt1.Rows[x]["WBSID"].ToString() + "' ";
+                            dal1.Session.Execute(sql1);
+                        }
+                        sql1 = "";
+                        sql1 = "update NPS_DES_ThreeDimensional_ListS set PayBonus = '" + PayBonus + "' where WBSID='" + dt1.Rows[x]["WBSID"].ToString() + "' ";
+                        dal1.Session.Execute(sql1);
+                        NewLife.Log.XTrace.WriteLine("是否执行此方法3");
                     }
-                    mainList.SetItem("PartyBAddress", row["乙方地址"]);
-                    mainList.SetItem("PartyBAgent", row["乙方经办人"]);
-                    Power.Business.IBusinessOperate Human = Power.Business.BusinessFactory.CreateBusinessOperate("Human");
-                    Power.Business.IBusinessList HumanList = Human.FindAll("Name='" + row["乙方经办人"] + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
-                    if (HumanList.Count > 0)
-                    {
-                        mainList.SetItem("PartyBAgentID", HumanList[0]["Id"]);
-                        mainList.SetItem("PartyBAgentDept", HumanList[0]["DeptName"]);
-                        mainList.SetItem("PartyBAgentDeptID", HumanList[0]["DeptId"]);
-                    }
-                    mainList.SetItem("PartyBAgentDept", row["部门"]);
-                    mainList.Save(System.ComponentModel.DataObjectMethodType.Insert);
                 }
             }
-            return "导入成功";
+
+            //更新专业施工图产值分解中的支取时完成比例字段
+            sql1 = "";
+            sql1 = "select sum(convert(float,BonusScale)) as ThisApplyScale,WBSID from NPS_DES_ProjectOutputGrant_HumList_SubDetail where fid='" + ID + "' and isnull(remark,'') ='' group by WBSID,Type having Type='设计' ";
+            System.Data.DataTable dt2 = dal1.Session.Query(sql1).Tables[0];
+            for (int x = 0; x < dt2.Rows.Count; x++)//这是每一个wbsid的本次支取产值的和
+            {
+                NewLife.Log.XTrace.WriteLine("是否执行此方法4");
+                Power.Business.IBusinessOperate Sb = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ThreeDimensional_ListS");
+                Power.Business.IBusinessList SbList2 = Sb.FindAll(" WBSID = '" + dt2.Rows[x]["WBSID"].ToString() + "' ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);//根据wbsid找到专业施工图产值分解累加到已支取产值中
+                if (SbList2.Count > 0)
+                {
+                    for (int j = 0; j < SbList2.Count; j++)
+                    {
+                        double dPayBonusRate = 0, dThisApplyScale = 0;
+                        if (SbList2[j]["PayBonusRate"] == null)
+                            dPayBonusRate = 0;
+                        else
+                            dPayBonusRate = double.Parse(SbList2[j]["PayBonusRate"].ToString());
+                        if (dt2.Rows[x]["ThisApplyScale"] == null)
+                            dThisApplyScale = 0;
+                        else
+                            dThisApplyScale = double.Parse(dt2.Rows[x]["ThisApplyScale"].ToString());
+
+                        string PayBonusRate = (dPayBonusRate + dThisApplyScale).ToString();
+                        //SbList2[j]["PayBonusRate"] = double.Parse(SbList2[j]["PayBonusRate"].ToString()) + double.Parse(dt2.Rows[x]["ThisApplyScale"].ToString());//回写支取时产值
+                        if (dPayBonusRate > 100)
+                        {
+                            SbList2[j]["StatusCode"] = "超额支取";
+                            sql1 = "";
+                            sql1 = "update NPS_DES_ThreeDimensional_ListS set StatusCode = '超额支取' where WBSID='" + dt2.Rows[x]["WBSID"].ToString() + "' ";
+                            dal1.Session.Execute(sql1);
+                        }
+                        else if (dPayBonusRate == 100)
+                        {
+                            SbList2[j]["IfGrant"] = "占用";
+                            sql1 = "";
+                            sql1 = "update NPS_DES_ThreeDimensional_ListS set IfGrant = '占用' where WBSID='" + dt2.Rows[x]["WBSID"].ToString() + "' ";
+                            dal1.Session.Execute(sql1);
+                        }
+
+                        sql1 = "";
+                        sql1 = "update NPS_DES_ThreeDimensional_ListS set PayBonusRate = '" + PayBonusRate + "' where WBSID='" + dt2.Rows[x]["WBSID"].ToString() + "' ";
+                        dal1.Session.Execute(sql1);
+                        //SbList2[j].Save(System.ComponentModel.DataObjectMethodType.Update);
+                        NewLife.Log.XTrace.WriteLine("是否执行此方法5");
+                    }
+                }
+            }
+            return "";
         }
 
-
-
-
-
-        public DataTable ContractDetail(string ConCode)
+        //三维产值审批后将对应子项已支取产值回写到对应任务分解表上
+        public string ReWriteBIMFinishBouns(string ID)
         {
-            string SQL = @"select * from (                            
-                            select                             
-                            A.ID,A.ConCode,A.ConReviewID,G.ID as BuildID,       
-                            --合同状态完结
-                            case when G.ID is null then '未立项'
-                                when (
-                                        (B.NotInvoice != '1' AND isnull(C.InvMoney,0) = isnull(A.ConTotMoney,0)- isnull(E.DeductionAmount,0) )
-                                        AND (isnull(D.ActRecMoney,0) = isnull(A.ConTotMoney,0)- isnull(E.DeductionAmount,0))
-                                        AND (isnull(B.InfoFee,0) + isnull(B.PrivRefund,0) = isnull(E.CurrentInfoFee,0) + isnull(E.CurrentPrivRefund,0))
-                                ) then '已完结'
-                                else '执行中'
-                                END ConStatus,
-                            A.ConEpsCode,A.ConEpsName,A.PartyA,A.PartyAAgent,A.PartyATelephone,A.PartyBAgent,A.PartyB,A.SignDate,A.ConMoney,A.SupConMoney,A.ConTotMoney,                            
-                            isnull(B.InfoFee,0) as InfoFee,isnull(B.PrivRefund,0) as PrivRefund,                            
-                            --实际收入=合同总金额-应付信息费-应付私退款                            
-                            isnull(A.ConTotMoney,0)-isnull(B.InfoFee,0)-isnull(B.PrivRefund,0) as ActSR,case when B.NotInvoice='1' then '否' else '是' end NotInvoice,                            
-                            isnull(C.InvMoney,0) as InvMoney,isnull(C.Tax,0) as Tax,isnull(D.ActRecMoney,0) as ActRecMoney,                            
-                            isnull(E.CurrentInfoFee,0) as CurrentInfoFee,isnull(E.CurrentPrivRefund,0) as CurrentPrivRefund,isnull(H.Money,0) as PSF,isnull(F.SubConTotMoney,0) as SubConTotMoney,isnull(E.DeductionAmount,0) as DeductionAmount,                            
-                            --合同毛利=实际收入-累计税额-累计支付评审费-分包合同总金额-合同扣减金额                            
-                            isnull(A.ConTotMoney,0)-isnull(B.InfoFee,0)-isnull(B.PrivRefund,0)-isnull(C.Tax,0)- isnull(H.Money,0) - isnull(F.SubConTotMoney,0)-isnull(E.DeductionAmount,0) as ConML                            
-                            from NPS_CON_RevenueContract A                            
-                            left join NPS_CON_CloseApplicatio B on A.ID=B.ConID                            
-                            left join (select ConID,sum(isnull(InvMoney,0)) as InvMoney,sum(isnull(Tax,0)) as Tax from NPS_CON_ContractInvoiceApplication group by ConID) C on A.ID=C.ConID                            
-                            left join (select ConID,sum(isnull(ActRecMoney,0)) as ActRecMoney from NPS_CON_ContractCollection group by ConID) D on A.ID=D.ConID                            
-                            left join (select ConID,sum(isnull(CurrentInfoFee,0)) as CurrentInfoFee,sum(isnull(CurrentPrivRefund,0)) as CurrentPrivRefund,                                            
-                                sum(isnull(DeductionAmount,0)) as DeductionAmount                                        
-                                from NPS_CON_RevenueContract_OtherExpend group by ConID) E on A.ID=E.ConID                             
-                            left join (select ConID,sum(isnull(SubConTotMoney,0)) as SubConTotMoney from NPS_CON_Subcontract group by ConID) F on A.ID=F.ConID                            
-                            left join NPS_ENVI_Build G on A.ID=G.ConID                            
-                            left join (select ConID,sum(isnull(Money,0)) as Money from NPS_HFS_Other_List K
-                            left join NPS_HFS_Other L on K.FID=L.ID where L.ConID is not null and K.FeeProject='专家评审费' group by ConID ) H on A.ID=H.ConID                            
-                            ) MM                         
-                            where ConCode='" + ConCode + "' order by ConEpsCode"
-                        ;
-            DataTable Dt = XCode.DataAccessLayer.DAL.QuerySQL(SQL);
-            return Dt;//返回的查询结果
+            //根据三维产值分解表的WBSID，获取完成比例最高的完成审批后互提资料单
+            XCode.DataAccessLayer.DAL dal1 = XCode.DataAccessLayer.DAL.Create();
+            string sql1 = "";
+            sql1 = "select max(Bonus) Bonus,max(PeriodCompleteScale) PeriodCompleteScale,WBSID from NPS_DES_ProjectOutputGrant_HumList_SubDetail where " +
+                   "fid in ( select ID from NPS_DES_ProjectOutputGrant_HumList where FID ='" + ID + "') group by WBSID";
+            System.Data.DataTable dt1 = dal1.Session.Query(sql1).Tables[0];
+            if (dt1.Rows.Count > 0)
+            {
+                for (int x = 0; x < dt1.Rows.Count; x++)
+                {
+                    Power.Business.IBusinessOperate Sb = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ThreeDimensional_ListS");
+                    Power.Business.IBusinessList SbList2 = Sb.FindAll(" WBSID = '" + dt1.Rows[x]["WBSID"].ToString() + "' ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                    if (SbList2.Count > 0)
+                    {
+                        for (int j = 0; j < SbList2.Count; j++)
+                        {
+                            SbList2[j]["PayBouns"] = dt1.Rows[x]["Bonus"];//回写支取时产值
+                            SbList2[j]["PayBounsRate"] = dt1.Rows[x]["PeriodCompleteScale"];//回写支取时比例
+                            SbList2[j].Save(System.ComponentModel.DataObjectMethodType.Update);
+                        }
+                    }
+                }
+            }
+            return "";
         }
 
 
-
-        public DataTable ContractBook(string Year, string swhere, string content)
+        //将项目专业产值支取模块中的本次支取产值和本次支取比例根据wbsid更新到对应专业施工图产值分解
+        public string UpCZFJBouns(string ID)
         {
-            string SQL = @"select * from (                            
-                                    select
-                                    --合同状态完结
-                                    case when H.ID is null then '未立项'
-                                        when (
-                                                (J.NotInvoice != '1' AND isnull(D.InvMoney,0) = isnull(B.ConTotMoney,0)- isnull(F.DeductionAmount,0) )
-                                                AND (isnull(E.ActRecMoney,0) = isnull(B.ConTotMoney,0)- isnull(F.DeductionAmount,0))
-                                                AND (isnull(C.InfoFee,0) + isnull(C.PrivRefund,0) = isnull(F.CurrentInfoFee,0) + isnull(F.CurrentPrivRefund,0))
-                                        ) then '已完结'
-                                        else '执行中'
-                                        END ConStatus,
-                                A.ID,A.ConCode,A.ConName,B.PartyA,B.PartyAAgent,B.PartyATelephone,B.PartyBAgent,B.PartyB,B.SignDate,B.ConMoney,B.SupConMoney,B.ConTotMoney,
-                                --信息费，私退款
-                                isnull(C.InfoFee,0) as InfoFee,isnull(C.PrivRefund,0) as PrivRefund,                    
-                                --实际收入=合同总金额-应付信息费-应付私退款                            
-                                isnull(B.ConTotMoney,0)-isnull(C.InfoFee,0)-isnull(C.PrivRefund,0) as ActSR,
-                                --是否开票    
-                                case when J.NotInvoice='1' then '否' else '是' end NotInvoice,
-                                --累计已开票金额，累计税额，累计已收款
-                                isnull(D.InvMoney,0) as InvMoney,isnull(D.Tax,0) as Tax,isnull(E.ActRecMoney,0) as ActRecMoney,
-                                --累计支付信息费，累计支付私退款，累计支付评审费
-                                isnull(F.CurrentInfoFee,0) as CurrentInfoFee,isnull(F.CurrentPrivRefund,0) as CurrentPrivRefund,
-                                isnull(I.Money,0) as PSF,isnull(G.SubConTotMoney,0) as SubConTotMoney,isnull(F.DeductionAmount,0) as DeductionAmount,
-                                --合同毛利=实际收入-累计税额-累计支付评审费-分包合同总金额-合同扣减金额
-                                isnull(B.ConTotMoney,0)-isnull(C.InfoFee,0)-isnull(C.PrivRefund,0)-isnull(D.Tax,0)-isnull(I.Money,0)-isnull(G.SubConTotMoney,0)-isnull(F.DeductionAmount,0) ConML
-                                from NPS_CON_ContractReview A
-                                left join (select * from (
-                                              select ROW_NUMBER() over(partition by ConReviewID  order by RegDate desc) RowNum
-                                               ,* from NPS_CON_RevenueContract ) as t1  where RowNum = 1
-                                          ) B on B.ConReviewID=A.ID       
-                                --收入合同辅助管理
-                                left join (select ConReviewID,sum(isnull(M.InfoFee,0)) as InfoFee,sum(isnull(M.PrivRefund,0)) as PrivRefund from NPS_CON_CloseApplicatio M
-                                                left join NPS_CON_RevenueContract N on M.ConID=N.ID group by N.ConReviewID) C on A.ID=C.ConReviewID        
-                                left join (select ConReviewID,sum(isnull(InvMoney,0)) as InvMoney,sum(isnull(Tax,0)) as Tax from NPS_CON_ContractInvoiceApplication M
-                                                left join NPS_CON_RevenueContract N on M.ConID=N.ID group by N.ConReviewID) D on A.ID=D.ConReviewID                             
-                                left join (select ConReviewID,sum(isnull(ActRecMoney,0)) as ActRecMoney from NPS_CON_ContractCollection M
-                                                left join NPS_CON_RevenueContract N on M.ConID=N.ID group by N.ConReviewID) E on A.ID=E.ConReviewID                             
-                                left join (select ConReviewID,sum(isnull(CurrentInfoFee,0)) as CurrentInfoFee,sum(isnull(CurrentPrivRefund,0)) as CurrentPrivRefund,sum(isnull(DeductionAmount,0)) as DeductionAmount from NPS_CON_RevenueContract_OtherExpend M
-                                                left join NPS_CON_RevenueContract N on M.ConID=N.ID group by N.ConReviewID) F on A.ID=F.ConReviewID      
-                                left join (select ConReviewID,sum(isnull(SubConTotMoney,0)) as SubConTotMoney from NPS_CON_Subcontract M
-                                                left join NPS_CON_RevenueContract N on M.ConID=N.ID group by N.ConReviewID) G on A.ID=G.ConReviewID
-                                left join (select * from (
-                                              select ROW_NUMBER() over(partition by ConReviewID  order by RegDate desc) RowNum
-                                               ,* from (
-                                                        select M.ID,N.ConReviewID,M.RegDate from NPS_ENVI_Build M left join NPS_CON_RevenueContract N on M.ConID=N.ID
-                                                        )  MM
-                                              ) as t1  where RowNum = 1
-                                          ) H on H.ConReviewID=A.ID      
-                                left join (select ConReviewID,sum(isnull(Money,0)) as Money from NPS_HFS_Other_List K
-                                                left join NPS_HFS_Other L on K.FID=L.ID
-                                                left join NPS_CON_RevenueContract P on L.ConID=P.ID where L.ConID is not null and K.FeeProject='专家评审费' group by P.ConReviewID ) I on A.ID=I.ConReviewID   
-                                left join (select * from (
-                                              select ROW_NUMBER() over(partition by ConReviewID  order by NotInvoice desc) RowNum
-                                               ,* from (
-                                                        select M.NotInvoice,N.ConReviewID,M.RegDate from NPS_CON_CloseApplicatio M left join NPS_CON_RevenueContract N on M.ConID=N.ID
-                                                        )  MM
-                                              ) as t1  where RowNum = 1
-                                          ) J on J.ConReviewID=A.ID            
-                            ) NN                        
-                        where Year(SignDate) = '" + Year + "' and " + swhere + " order by ConCode"
-                        ;
-            DataTable Dt = XCode.DataAccessLayer.DAL.QuerySQL(SQL);
-            return Dt;//返回的查询结果
+            //根据项目专业产值支取的id找到项目人员分解明细的明细记录，根据明细记录中的wbsid找到对应专业施工图产值分解
+            XCode.DataAccessLayer.DAL dal1 = XCode.DataAccessLayer.DAL.Create();
+            string sql1 = "";
+            sql1 = "select sum(Bonus) as Bonus,WBSID from NPS_DES_ProjectOutputGrant_EpsList where fid='" + ID + "'  group by WBSID ";
+            System.Data.DataTable dt1 = dal1.Session.Query(sql1).Tables[0];
+            for (int x = 0; x < dt1.Rows.Count; x++)//这是每一个wbsid的本次支取产值的和
+            {
+                NewLife.Log.XTrace.WriteLine("是否执行此方法1");
+                Power.Business.IBusinessOperate Sb = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut_ListS");
+                Power.Business.IBusinessList SbList2 = Sb.FindAll(" WBSID = '" + dt1.Rows[x]["WBSID"].ToString() + "' ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);//根据wbsid找到专业施工图产值分解累加到已支取产值中
+                if (SbList2.Count > 0)
+                {
+                    NewLife.Log.XTrace.WriteLine("是否执行此方法2");
+                    for (int j = 0; j < SbList2.Count; j++)
+                    {
+                        double dPayBonus = 0, dBonus = 0;
+                        string StatusCode = "";
+                        if (SbList2[j]["StatusCode"] == null)
+                            StatusCode = "";
+                        else
+                            StatusCode = SbList2[j]["StatusCode"].ToString();
+                        if (SbList2[j]["PayBonus"] == null)
+                            dPayBonus = 0;
+                        else
+                            dPayBonus = double.Parse(SbList2[j]["PayBonus"].ToString());
+                        if (dt1.Rows[x]["Bonus"] == null)
+                            dBonus = 0;
+                        else
+                            dBonus = double.Parse(dt1.Rows[x]["Bonus"].ToString());
+                        string PayBonus = (dPayBonus+ dBonus).ToString();
+                        //SbList2[j]["PayBonus"] = double.Parse(SbList2[j]["PayBonus"].ToString()) + double.Parse(dt1.Rows[x]["Bonus"].ToString());//回写支取时产值
+                        NewLife.Log.XTrace.WriteLine("是否执行此方法6"+ StatusCode);
+                        if (StatusCode.Trim().Equals("正在支取") || StatusCode.Trim().Equals("正在增补"))
+                        {
+                            sql1 = "";
+                            sql1 = "update NPS_DES_ProfOutputCut_ListS set StatusCode = '' where WBSID='" + dt1.Rows[x]["WBSID"].ToString() + "' ";
+                            dal1.Session.Execute(sql1);
+                        }
+                        else if (dBonus < dPayBonus)
+                        {
+                            SbList2[j]["StatusCode"] = "超额支取";
+                            sql1 = "";
+                            sql1 = "update NPS_DES_ProfOutputCut_ListS set StatusCode = '超额支取' where WBSID='" + dt1.Rows[x]["WBSID"].ToString() + "' ";
+                            dal1.Session.Execute(sql1);
+                        }
+                        sql1 = "";
+                        sql1 = "update NPS_DES_ProfOutputCut_ListS set PayBonus = '" + PayBonus + "' where WBSID='" + dt1.Rows[x]["WBSID"].ToString() + "' ";
+                        dal1.Session.Execute(sql1);
+                        NewLife.Log.XTrace.WriteLine("是否执行此方法3");
+                    }
+                }
+            }
+
+            //更新专业施工图产值分解中的支取时完成比例字段
+            sql1 = "";
+            sql1 = "select sum(convert(float,ThisApplyScale)) as ThisApplyScale,WBSID from NPS_DES_ProjectOutputGrant_EpsList where fid='" + ID + "'  and isnull(remark,'') ='' group by WBSID,Type having Type='设计' ";
+            System.Data.DataTable dt2 = dal1.Session.Query(sql1).Tables[0];
+            for (int x = 0; x < dt2.Rows.Count; x++)//这是每一个wbsid的本次支取产值的和
+            {
+                NewLife.Log.XTrace.WriteLine("是否执行此方法4");
+                Power.Business.IBusinessOperate Sb = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut_ListS");
+                Power.Business.IBusinessList SbList2 = Sb.FindAll(" WBSID = '" + dt2.Rows[x]["WBSID"].ToString() + "' ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);//根据wbsid找到专业施工图产值分解累加到已支取产值中
+                if (SbList2.Count > 0)
+                {
+                    for (int j = 0; j < SbList2.Count; j++)
+                    {
+                        double dPayBonusRate = 0, dThisApplyScale = 0;
+                        if (SbList2[j]["PayBonusRate"] == null)
+                            dPayBonusRate = 0;
+                        else
+                            dPayBonusRate = double.Parse(SbList2[j]["PayBonusRate"].ToString());
+                        if (dt2.Rows[x]["ThisApplyScale"] == null)
+                            dThisApplyScale = 0;
+                        else
+                            dThisApplyScale = double.Parse(dt2.Rows[x]["ThisApplyScale"].ToString());
+
+                        string PayBonusRate = (dPayBonusRate + dThisApplyScale).ToString();
+                        //SbList2[j]["PayBonusRate"] = double.Parse(SbList2[j]["PayBonusRate"].ToString()) + double.Parse(dt2.Rows[x]["ThisApplyScale"].ToString());//回写支取时产值
+                        if (dPayBonusRate > 100)
+                        {
+                            SbList2[j]["StatusCode"] = "超额支取";
+                            sql1 = "";
+                            sql1 = "update NPS_DES_ProfOutputCut_ListS set StatusCode = '超额支取' where WBSID='" + dt2.Rows[x]["WBSID"].ToString() + "' ";
+                            dal1.Session.Execute(sql1);
+                        }
+                        else if (dPayBonusRate == 100)
+                        {
+                            SbList2[j]["IfGrant"] = "占用";
+                            sql1 = "";
+                            sql1 = "update NPS_DES_ProfOutputCut_ListS set IfGrant = '占用' where WBSID='" + dt2.Rows[x]["WBSID"].ToString() + "' ";
+                            dal1.Session.Execute(sql1);
+                        }
+
+                        sql1 = "";
+                        sql1 = "update NPS_DES_ProfOutputCut_ListS set PayBonusRate = '" + PayBonusRate + "' where WBSID='" + dt2.Rows[x]["WBSID"].ToString() + "' ";
+                        dal1.Session.Execute(sql1);
+                        //SbList2[j].Save(System.ComponentModel.DataObjectMethodType.Update);
+                        NewLife.Log.XTrace.WriteLine("是否执行此方法5");
+                    }
+                }
+            }
+            return "";
         }
 
-
-
-        public DataTable SubContractBook(string ConCode)
+        //lx V3
+        public void backOverwriteProfOutCutV3(string FID, string originFID)
         {
-            string SQL = @"select   A.ID,
-                                    case when isnull(B.RecInvMoney,0)=SubConTotMoney and isnull(D.PayMoney,0)=SubConTotMoney then '已完结' else '执行中' END ConStatus,
-                                    SubConCode,SubConName,SubConMoney,SupSubConMoney,SubConTotMoney,isnull(B.RecInvMoney,0) as RecInvMoney,isnull(C.TaxAmount,0) as TaxAmount,
-                                    isnull(D.PayMoney,0) as PayMoney
-                            from NPS_CON_Subcontract A
-                            left join (select ConID,sum(isnull(RecInvMoney,0)) as RecInvMoney from NPS_CON_ContractReceipt group by ConID) B on A.ID=B.ConID
-                            left join (select ConID,sum(isnull(M.TaxAmount,0)) as TaxAmount from NPS_CON_ContractReceipt_List M
-                                                left join NPS_CON_ContractReceipt N on M.FID=N.ID group by N.ConID) C on A.ID=C.ConID
-                            left join (select ConID,sum(isnull(PayMoney,0)) as PayMoney from NPS_CON_PayApplication group by ConID) D on A.ID=D.ConID
-                            where A.ConCode='" + ConCode + "'"
-                        ;
-            DataTable Dt = XCode.DataAccessLayer.DAL.QuerySQL(SQL);
-            return Dt;//返回的查询结果
+            Power.Business.IBusinessOperate adjustBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCutAdjust");
+            Power.Business.IBusinessOperate adjustListBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCutAdjust_List");
+            Power.Business.IBusinessOperate adjustListSBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCutAdjust_ListS");
+            Power.Business.IBusinessOperate adjustListDesListBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCutAdjust_ListS_DesList");
+            Power.Business.IBusinessOperate originBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputApply");
+            Power.Business.IBusinessOperate originListBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputApply_ThreeDimensional");
+            Power.Business.IBusinessOperate originListSBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ThreeDimensional_ListS");
+            Power.Business.IBusinessOperate originListDesListBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ThreeDimensional_ListS_DesList");
+
+            Power.Business.IBusinessList submitListList = originListBO.FindAll(" 1=0 ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+            Power.Business.IBusinessList submitListSList = originListSBO.FindAll(" 1=0 ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+            Power.Business.IBusinessList submitListDesListList = originListDesListBO.FindAll(" 1=0 ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+
+
+
+            //根据 调整表 重写 产值分解表
+            //子表
+            Power.Business.IBusinessList adjustListList = adjustListBO.FindAll("FID", FID, Power.Business.SearchFlag.IgnoreRight);
+
+
+            double BonusSum = 0;
+            foreach (var listItem in adjustListList)
+            {
+                BonusSum += Convert.ToDouble(listItem["Bonus"]);
+                Power.Business.IBaseBusiness originList = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProjectOutputApply_ThreeDimensional");
+                foreach (KeyValuePair<string, Power.Business.BusinessProperty> businessProperty in originListBO.EntityPropertyList)
+                {
+                    originList.SetItem(businessProperty.Value.PropertyName, listItem[businessProperty.Value.PropertyName]);
+                }
+                if (!(Convert.ToString(listItem["ProfListID"]) == "00000000-0000-0000-0000-000000000000"))
+                {
+                    originList.SetItem("ID", listItem["ProfListID"]);
+                }
+                originList.SetItem("FID", originFID);
+                string listSFID = Convert.ToString(originList["ID"]);
+                //孙表
+                Power.Business.IBusinessList adjustListSList = adjustListSBO.FindAll("FID", Convert.ToString(listItem["ID"]));
+                //支取检测
+                //Power.Business.IBusinessList grantChildrenChangeCount = originListSBO.FindCount("ID='" + Convert.ToString(listSItem["TaskListID"]) + "' and IfGrant='" + listSItem["IfGrant"] + "'")
+                XCode.DataAccessLayer.DAL dal1 = XCode.DataAccessLayer.DAL.Create();
+                string sql = "";
+                sql = @"--查询调整孙表的IfGrant和原子表是否有出入
+                     select COUNT(*)
+                     from NPS_DES_ThreeDimensional_ListS C
+                     inner JOIN NPS_DES_ProfOutputCutAdjust_ListS P
+                     ON P.TaskListID = C.ID and ISNULL(P.IfGrant,' ')!=ISNULL(C.IfGrant,' ')
+                     where P.FID='" + Convert.ToString(listItem["ID"]) + "'";
+                System.Data.DataTable dt1 = dal1.Session.Query(sql).Tables[0];
+                if (Convert.ToInt32(dt1.Rows[0][0]) > 0)
+                {
+                    var objMain = adjustBO.FindByKey(FID);
+                    objMain.SetItem("IfAdjust", "否");
+                    objMain.Save(System.ComponentModel.DataObjectMethodType.Update);
+                    return;
+                    //throw new Exception("当前产值分解在调整期间发生支取，调整失败！");
+                }
+
+                foreach (var listSItem in adjustListSList)
+                {
+                    Power.Business.IBaseBusiness originListS = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ThreeDimensional_ListS");
+                    foreach (KeyValuePair<string, Power.Business.BusinessProperty> businessProperty in originListSBO.EntityPropertyList)
+                    {
+                        originListS.SetItem(businessProperty.Value.PropertyName, listSItem[businessProperty.Value.PropertyName]);
+                    }
+                    if (!(Convert.ToString(listSItem["TaskListID"]) == "00000000-0000-0000-0000-000000000000"))
+                    {
+                        originListS.SetItem("ID", listSItem["TaskListID"]);
+                    }
+                    NewLife.Log.XTrace.WriteLine("二维产值调整修改分配产值");
+                    string adjustTaskBonus = Convert.ToString(Convert.ToDouble(listItem["Bonus"]) * Convert.ToDouble(listSItem["Rate"]) / 100);//修改后分配产值=修改后车间产值*修改后车间比例
+                    originListS.SetItem("Bonus", adjustTaskBonus);
+                    originListS.SetItem("FID", listSFID);
+                    string desListFID = Convert.ToString(originListS["ID"]);
+                    Power.Business.IBusinessOperate grantBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ThreeDimensional_ListS");
+                    Power.Business.IBusinessList GrantBo = grantBo.FindAll("WBSID='" + listSItem["WBSID"].ToString() + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                    if (GrantBo.Count > 0)
+                    {
+                        NewLife.Log.XTrace.WriteLine("值等于=" + adjustTaskBonus);
+                        NewLife.Log.XTrace.WriteLine("值等于=" + GrantBo[0]["Bonus"].ToString());
+                        double PayBonus = 0, PayBonusRate = 0;
+                        if (GrantBo[0]["PayBonus"] == null)
+                        {
+                            PayBonus = 0;
+                        }
+                        else
+                            PayBonus = double.Parse(GrantBo[0]["PayBonus"].ToString());
+                        if (GrantBo[0]["PayBonusRate"] == null)
+                        {
+                            PayBonusRate = 0;
+                        }
+                        else
+                            PayBonusRate = double.Parse(GrantBo[0]["PayBonusRate"].ToString());
+
+                        if ((!adjustTaskBonus.Equals(GrantBo[0]["Bonus"].ToString())) && (PayBonus != 0 && PayBonusRate != 0))//判断值不一样
+                        {
+                            originListS.SetItem("StatusCode", "待增补");
+                        }
+                    }
+                    //孙孙表
+                    Power.Business.IBusinessList adjustListDesListList = adjustListDesListBO.FindAll("FID", Convert.ToString(listSItem["ID"]));
+                    foreach (var listDesListItem in adjustListDesListList)
+                    {
+                        Power.Business.IBaseBusiness originListDesList = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ThreeDimensional_ListS_DesList");
+                        foreach (KeyValuePair<string, Power.Business.BusinessProperty> businessProperty in originListDesListBO.EntityPropertyList)
+                        {
+                            originListDesList.SetItem(businessProperty.Value.PropertyName, listDesListItem[businessProperty.Value.PropertyName]);
+                        }
+                        if (!(Convert.ToString(listDesListItem["DesListID"]) == "00000000-0000-0000-0000-000000000000"))
+                        {
+                            originListDesList.SetItem("ID", listDesListItem["DesListID"]);
+                        }
+                        originListDesList.SetItem("FID", desListFID);
+                        //originListDesList.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                        submitListDesListList.Add(originListDesList);
+                    }
+                    //originListS.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                    submitListSList.Add(originListS);
+                }
+                //originList.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                submitListList.Add(originList);
+            }
+
+
+            //删除原有的子、孙、孙孙表数据
+            //delete(originFID);
+            //子表
+            Power.Business.IBusinessList originListList = originListBO.FindAll("FID", originFID, Power.Business.SearchFlag.IgnoreRight);
+
+            foreach (var listItem in originListList)
+            {
+                //孙表
+                Power.Business.IBusinessList originListSList = originListSBO.FindAll("FID", Convert.ToString(listItem["ID"]));
+                foreach (var listSItem in originListSList)
+                {
+                    NewLife.Log.XTrace.WriteLine("继承task执行钱。。。");
+                    //孙孙表
+                    Power.Business.IBusinessList originListDesListList = originListDesListBO.FindAll("FID", Convert.ToString(listSItem["ID"]));
+                    originListDesListList.Delete();
+                }
+                originListSList.Delete();
+            }
+            originListList.Delete();
+
+
+
+            //保存新数据
+            submitListList.Save(true);
+            submitListSList.Save(true);
+            submitListDesListList.Save(true);
+            //更新原有的分配产值（主表）
+            Power.Business.IBaseBusiness baseBusiness = originBO.FindByKey(originFID, Power.Business.SearchFlag.IgnoreRight);
+
+            baseBusiness.SetItem("PeriodApplyBonus", BonusSum);
+            baseBusiness.SetItem("PeriodReplyBonus", BonusSum);
+
+
+            baseBusiness.Save(System.ComponentModel.DataObjectMethodType.Update);
+
+        }
+
+        /*
+第一次保存时自动插入专业施工图产值分解明细
+胡宁绘
+*/
+
+        public string GetDataOutPut(string ID, string EpsProjId, string ProfID)
+        {
+            // 根据项目和专业 找到专业施工图产值分解
+            Power.Business.IBusinessOperate outputBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut");
+            Power.Business.IBusinessList OutputBo = outputBo.FindAll("ProjectID='" + EpsProjId + "' AND ProfID = '" + ProfID + "' AND Status = 50", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+            if (OutputBo.Count > 0)
+            {
+                // 根据专业施工图产值分解 找到专业施工图产值分解子表
+                Power.Business.IBusinessOperate outputListBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut_List");
+                Power.Business.IBusinessList OutputListBo = outputListBo.FindAll("FID='" + OutputBo[0]["ID"] + "'", "Sequ", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                if (OutputListBo.Count > 0)
+                {
+                    for (int i = 0; i < OutputListBo.Count; i++)
+                    {
+                        string ListID = Guid.NewGuid().ToString();
+                        // 找到专业施工图产值分解子表之后 对数据处理进入循环 插入到专业施工图产值分解调整子表中
+                        Power.Business.IBaseBusiness Listbus = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProfOutputCutScaleAdjust_List");//专业产值分解调整子表
+                        Listbus.SetItem("ID", ListID);
+                        Listbus.SetItem("FID", ID);
+                        Listbus.SetItem("SubID", OutputListBo[i]["SubID"]);//子项ID
+                        Listbus.SetItem("SubCode", OutputListBo[i]["SubCode"]);//子项编号
+                        Listbus.SetItem("SubName", OutputListBo[i]["SubName"]);//子项名称
+                        Listbus.SetItem("Bonus", OutputListBo[i]["Bonus"]);//分配产值
+                        Listbus.SetItem("ProfListID", OutputListBo[i]["ID"]);//分解子项ID（子表ID）
+                        Listbus.SetItem("IfAdjustSub", "是");
+                        Listbus.Save(System.ComponentModel.DataObjectMethodType.Insert);
+
+                        // 插入专业施工图产值分解子表之后 查找对应专业施工图产值分解孙表数据
+                        Power.Business.IBusinessOperate outputListSBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut_ListS");
+                        Power.Business.IBusinessList OutputListSBo = outputListSBo.FindAll("FID='" + OutputListBo[i]["ID"] + "'", "Sequ", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                        if (OutputListSBo.Count > 0)
+                        {
+                            for (int x = 0; x < OutputListSBo.Count; x++)
+                            {
+                                string ListSID = Guid.NewGuid().ToString();
+                                // 找到专业施工图产值分解孙表数据 进行循环处理 插入到专业施工图产值分解调整孙表中
+                                Power.Business.IBaseBusiness ListSbus = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProfOutputCutScaleAdjust_ListS");
+                                ListSbus.SetItem("ID", ListSID);
+                                ListSbus.SetItem("FID", ListID);
+                                ListSbus.SetItem("PayBonus", OutputListSBo[x]["PayBonus"]);
+                                ListSbus.SetItem("PayBonusRate", OutputListSBo[x]["PayBonusRate"]);
+                                ListSbus.SetItem("TaskID", OutputListSBo[x]["TaskID"]); // 任务ID
+                                ListSbus.SetItem("TaskCode", OutputListSBo[x]["TaskCode"]); // 任务编号
+                                ListSbus.SetItem("TaskName", OutputListSBo[x]["TaskName"]); // 任务名称
+                                ListSbus.SetItem("Rate", OutputListSBo[x]["Rate"]); // 分配比例
+                                ListSbus.SetItem("DesType", OutputListSBo[x]["DesType"]); // 类型(设计人)
+                                ListSbus.SetItem("DesignRate", OutputListSBo[x]["DesignRate"]); // 设计
+                                ListSbus.SetItem("CheckRate", OutputListSBo[x]["CheckRate"]); // 校对
+                                ListSbus.SetItem("ReviewRate", OutputListSBo[x]["ReviewRate"]); // 审核
+                                ListSbus.SetItem("ApproveRate", OutputListSBo[x]["ApproveRate"]); // 审定
+                                ListSbus.SetItem("Bonus", OutputListSBo[x]["Bonus"]); // 分配产值
+                                ListSbus.SetItem("TaskListID", OutputListSBo[x]["ID"]); // 分解任务ID（孙表ID）
+                                ListSbus.SetItem("IfGrant", OutputListSBo[x]["IfGrant"]); // 是否支取
+                                ListSbus.SetItem("WBSID", OutputListSBo[x]["WBSID"]); // WBSID
+                                ListSbus.SetItem("OriginRate", OutputListSBo[x]["OriginRate"]); // 是否支取
+                                ListSbus.SetItem("BaseTaskID", OutputListSBo[x]["BaseTaskID"]); // 基础数据ID
+                                ListSbus.Save(System.ComponentModel.DataObjectMethodType.Insert);
+
+                                // 插入专业施工图产值分解孙表之后 查找对应专业施工图产值分解孙孙表数据
+                                Power.Business.IBusinessOperate outputListSDesBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut_ListS_DesList");
+                                Power.Business.IBusinessList OutputListSDesBo = outputListSDesBo.FindAll("FID='" + OutputListSBo[x]["ID"] + "'", "Sequ", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                                if (OutputListSDesBo.Count > 0)
+                                {
+                                    for (int y = 0; y < OutputListSDesBo.Count; y++)
+                                    {
+                                        // 找到专业施工图产值分解孙孙表数据 进行循环处理 插入到专业施工图产值分解调整孙孙表中
+                                        Power.Business.IBaseBusiness ySubList = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProfOutputCutScaleAdjust_ListS_DesList");
+                                        ySubList.SetItem("ID", Guid.NewGuid().ToString());
+                                        ySubList.SetItem("FID", ListSID);
+                                        ySubList.SetItem("DesHumanID", OutputListSDesBo[y]["DesHumanID"]); // 设计人员ID
+                                        ySubList.SetItem("DesHumanCode", OutputListSDesBo[y]["DesHumanCode"]); // 设计人员编号
+                                        ySubList.SetItem("DesHumanName", OutputListSDesBo[y]["DesHumanName"]); // 设计人员名称
+                                        ySubList.SetItem("AllocationBonus", OutputListSDesBo[y]["AllocationBonus"]); // 分配产值
+                                        ySubList.SetItem("IfMore", OutputListSDesBo[y]["IfMore"]); // 是否多设计人
+                                        ySubList.SetItem("DesBonus", OutputListSDesBo[y]["DesBonus"]); // 设计人员分配总产值
+                                        ySubList.SetItem("DesListID", OutputListSDesBo[y]["ID"]); // 分解设计产值ID（孙孙表ID）
+                                        ySubList.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            //}
+            return "";
+        }
+
+        /// <summary>
+        /// by gzz 20191213
+        /// </summary>
+        /// <param name="FID">调整表主表ID</param>
+        /// <param name="originFID">原来的表的主表ID</param>
+        public void backOverwriteProfOutCut(string FID, string originFID)
+        {
+            Power.Business.IBusinessOperate adjustBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCutAdjust");
+            Power.Business.IBusinessOperate adjustListBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCutAdjust_List");
+            Power.Business.IBusinessOperate adjustListSBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCutAdjust_ListS");
+            Power.Business.IBusinessOperate adjustListDesListBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCutAdjust_ListS_DesList");
+            Power.Business.IBusinessOperate originBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut");
+            Power.Business.IBusinessOperate originListBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut_List");
+            Power.Business.IBusinessOperate originListSBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut_ListS");
+            Power.Business.IBusinessOperate originListDesListBO = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut_ListS_DesList");
+
+            Power.Business.IBusinessList submitListList = originListBO.FindAll(" 1=0 ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+            Power.Business.IBusinessList submitListSList = originListSBO.FindAll(" 1=0 ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+            Power.Business.IBusinessList submitListDesListList = originListDesListBO.FindAll(" 1=0 ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+
+
+
+            //根据 调整表 重写 产值分解表
+            //子表
+            Power.Business.IBusinessList adjustListList = adjustListBO.FindAll("FID", FID, Power.Business.SearchFlag.IgnoreRight);
+
+
+            double BonusSum = 0;
+            if (adjustListList.Count == 0)
+            {
+                NewLife.Log.XTrace.WriteLine("调整审批后事件--根据调整表主表ID未找到对应子项，主表ID为：" + FID);
+            }
+            foreach (var listItem in adjustListList)
+            {
+                NewLife.Log.XTrace.WriteLine("调整审批后事件--调整子表循环");
+                BonusSum += Convert.ToDouble(listItem["Bonus"]);
+                Power.Business.IBaseBusiness originList = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProfOutputCut_List");
+                foreach (KeyValuePair<string, Power.Business.BusinessProperty> businessProperty in originListBO.EntityPropertyList)
+                {
+                    NewLife.Log.XTrace.WriteLine("调整审批后事件--写入子表循环");
+                    originList.SetItem(businessProperty.Value.PropertyName, listItem[businessProperty.Value.PropertyName]);
+                }
+                if (!(Convert.ToString(listItem["ProfListID"]) == "00000000-0000-0000-0000-000000000000"))
+                {
+                    originList.SetItem("ID", listItem["ProfListID"]);
+                }
+                originList.SetItem("FID", originFID);
+                string listSFID = Convert.ToString(originList["ID"]);
+                //孙表
+                Power.Business.IBusinessList adjustListSList = adjustListSBO.FindAll("FID", Convert.ToString(listItem["ID"]));
+                //支取检测
+                //Power.Business.IBusinessList grantChildrenChangeCount = originListSBO.FindCount("ID='" + Convert.ToString(listSItem["TaskListID"]) + "' and IfGrant='" + listSItem["IfGrant"] + "'")
+                XCode.DataAccessLayer.DAL dal1 = XCode.DataAccessLayer.DAL.Create();
+                string sql = "";
+                sql = @"--查询调整孙表的IfGrant和原子表是否有出入
+                     select COUNT(*)
+                     from NPS_DES_ProfOutputCut_ListS C
+                     inner JOIN NPS_DES_ProfOutputCutAdjust_ListS P
+                     ON P.TaskListID = C.ID and ISNULL(P.IfGrant,' ')!=ISNULL(C.IfGrant,' ')
+                     where P.FID='" + Convert.ToString(listItem["ID"]) + "'";
+                System.Data.DataTable dt1 = dal1.Session.Query(sql).Tables[0];
+
+                if (Convert.ToInt32(dt1.Rows[0][0]) > 0)
+                {
+                    NewLife.Log.XTrace.WriteLine("调整审批后事件--查询调整孙表的IfGrant和原子表是否有出入 -- 跳出循环");
+                    var objMain = adjustBO.FindByKey(FID);
+                    objMain.SetItem("IfAdjust", "否");
+                    objMain.Save(System.ComponentModel.DataObjectMethodType.Update);
+                    return;
+                    //throw new Exception("当前产值分解在调整期间发生支取，调整失败！");
+                }
+                else
+                {
+                    NewLife.Log.XTrace.WriteLine("调整审批后事件--查询调整孙表的IfGrant和原子表是否有出入 -- 继续执行循环");
+                }
+
+                if (adjustListSList.Count == 0)
+                {
+                    NewLife.Log.XTrace.WriteLine("调整审批后事件--根据调整表子项ID未找到对应任务，子项ID为：" + Convert.ToString(listItem["ID"]));
+                }
+                foreach (var listSItem in adjustListSList)
+                {
+                    NewLife.Log.XTrace.WriteLine("调整审批后事件--调整孙表循环");
+                    Power.Business.IBaseBusiness originListS = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProfOutputCut_ListS");
+
+                    
+
+                    foreach (KeyValuePair<string, Power.Business.BusinessProperty> businessProperty in originListSBO.EntityPropertyList)
+                    {
+                        NewLife.Log.XTrace.WriteLine("调整审批后事件--写入孙表循环");
+                        originListS.SetItem(businessProperty.Value.PropertyName, listSItem[businessProperty.Value.PropertyName]);
+                    }
+                    if (!(Convert.ToString(listSItem["TaskListID"]) == "00000000-0000-0000-0000-000000000000"))
+                    {
+                        originListS.SetItem("ID", listSItem["TaskListID"]);
+                    }
+                    NewLife.Log.XTrace.WriteLine("二维产值调整修改分配产值");                   
+
+
+                    string adjustTaskBonus = Convert.ToString(Convert.ToDouble(listItem["Bonus"]) * Convert.ToDouble(listSItem["Rate"]) / 100);//修改后分配产值=修改后车间产值*修改后车间比例
+                    originListS.SetItem("Bonus", adjustTaskBonus);
+                    originListS.SetItem("FID", listSFID);
+                    string desListFID = Convert.ToString(originListS["ID"]);
+
+                    Power.Business.IBusinessOperate grantBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProfOutputCut_ListS");
+                    Power.Business.IBusinessList GrantBo = grantBo.FindAll("WBSID='" + listSItem["WBSID"].ToString() + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                    if(GrantBo.Count>0)
+                    {
+                        NewLife.Log.XTrace.WriteLine("值等于=" + adjustTaskBonus);
+                        NewLife.Log.XTrace.WriteLine("值等于=" + GrantBo[0]["Bonus"].ToString());
+                        double PayBonus = 0, PayBonusRate = 0;
+                        if (GrantBo[0]["PayBonus"] == null)
+                        {
+                            PayBonus = 0;
+                        }
+                        else
+                            PayBonus = double.Parse(GrantBo[0]["PayBonus"].ToString());
+                        if (GrantBo[0]["PayBonusRate"] == null)
+                        {
+                            PayBonusRate = 0;
+                        }
+                        else
+                            PayBonusRate = double.Parse(GrantBo[0]["PayBonusRate"].ToString());
+
+                        if ((!adjustTaskBonus.Equals(GrantBo[0]["Bonus"].ToString())) && (PayBonus != 0 && PayBonusRate != 0))//判断值不一样
+                        {
+                            originListS.SetItem("StatusCode", "待增补");
+                        }
+                    }
+                    
+                        //孙孙表
+                        Power.Business.IBusinessList adjustListDesListList = adjustListDesListBO.FindAll("FID", Convert.ToString(listSItem["ID"]));
+                    if (adjustListDesListList.Count == 0)
+                    {
+                        NewLife.Log.XTrace.WriteLine("调整审批后事件--根据调整表任务ID未找到对应人员，任务ID为：" + Convert.ToString(listSItem["ID"]));
+                    }
+                    foreach (var listDesListItem in adjustListDesListList)
+                    {
+                        NewLife.Log.XTrace.WriteLine("调整审批后事件--调整孙孙表循环");
+                        Power.Business.IBaseBusiness originListDesList = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProfOutputCut_ListS_DesList");
+                        foreach (KeyValuePair<string, Power.Business.BusinessProperty> businessProperty in originListDesListBO.EntityPropertyList)
+                        {
+                            NewLife.Log.XTrace.WriteLine("调整审批后事件--写入孙孙表循环");
+                            originListDesList.SetItem(businessProperty.Value.PropertyName, listDesListItem[businessProperty.Value.PropertyName]);
+                        }
+                        if (!(Convert.ToString(listDesListItem["DesListID"]) == "00000000-0000-0000-0000-000000000000"))
+                        {
+                            originListDesList.SetItem("ID", listDesListItem["DesListID"]);
+                        }
+                        originListDesList.SetItem("FID", desListFID);
+                        //originListDesList.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                        submitListDesListList.Add(originListDesList);
+                    }
+                    //originListS.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                    submitListSList.Add(originListS);
+
+
+                }
+                //originList.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                submitListList.Add(originList);
+            }
+            //删除原有的子、孙、孙孙表数据
+            //delete(originFID);
+            //子表
+            Power.Business.IBusinessList originListList = originListBO.FindAll("FID", originFID, Power.Business.SearchFlag.IgnoreRight);
+            foreach (var listItem in originListList)
+            {
+                //孙表
+                Power.Business.IBusinessList originListSList = originListSBO.FindAll("FID", Convert.ToString(listItem["ID"]));
+                foreach (var listSItem in originListSList)
+                {
+                    //孙孙表
+                    Power.Business.IBusinessList originListDesListList = originListDesListBO.FindAll("FID", Convert.ToString(listSItem["ID"]));
+                    originListDesListList.Delete();
+                }
+                originListSList.Delete();
+            }
+            originListList.Delete();
+
+            //保存新数据
+            submitListList.Save(true);
+            submitListSList.Save(true);
+            submitListDesListList.Save(true);
+            //更新原有的分配产值（主表）
+            Power.Business.IBaseBusiness baseBusiness = originBO.FindByKey(originFID, Power.Business.SearchFlag.IgnoreRight);
+
+            baseBusiness.SetItem("AllocationBonus", BonusSum);
+            baseBusiness.Save(System.ComponentModel.DataObjectMethodType.Update);
+
+        }
+
+
+        public string DeleteProfBonus(string ID)
+        {
+            try
+            {
+                Power.Business.IBusinessOperate grantBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant");//项目专业产值支取
+                Power.Business.IBusinessList GrantBo = grantBo.FindAll("ID='" + ID + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                if (GrantBo.Count > 0)
+                {
+                    Power.Business.IBusinessOperate grantList = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant_HumList");//项目专业产值支取子表1
+                    Power.Business.IBusinessList GrantListBo = grantList.FindAll("FID='" + ID + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                    Power.Business.IBusinessOperate grantListTwo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant_EpsList");//项目专业产值支取子表2
+                    Power.Business.IBusinessList GrantListBoTwo = grantListTwo.FindAll("FID='" + ID + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                    if (GrantListBoTwo.Count > 0)
+                    {
+                        for (int i = 0; i < GrantListBoTwo.Count; i++)
+                        {
+                            string htsql = "";
+                            XCode.DataAccessLayer.DAL dalsql = XCode.DataAccessLayer.DAL.Create();
+                            string sSQL = "";
+                            sSQL = "select isnull(StatusCode,'') as StatusCode from  NPS_DES_ProfOutputCut_ListS WHERE ID = '" + GrantListBoTwo[i]["ListSID"] + "' ";
+                            System.Data.DataTable dt2 = dalsql.Session.Query(sSQL).Tables[0];
+                            if (dt2.Rows.Count > 0)
+                            {
+                                if (dt2.Rows[0]["StatusCode"].ToString().Equals("正在支取") || dt2.Rows[0]["StatusCode"].ToString().Equals(""))
+                                {
+                                    htsql = "";
+                                    htsql = @"UPDATE NPS_DES_ProfOutputCut_ListS SET StatusCode = '' WHERE ID = '" + GrantListBoTwo[i]["ListSID"] + "'";
+                                    dalsql.Session.Execute(htsql);
+                                }
+                                else if (dt2.Rows[0]["StatusCode"].ToString().Equals("正在增补"))
+                                {
+                                    htsql = "";
+                                    htsql = @"UPDATE NPS_DES_ProfOutputCut_ListS SET StatusCode = '待增补' WHERE ID = '" + GrantListBoTwo[i]["ListSID"] + "'";
+                                    dalsql.Session.Execute(htsql);
+                                }
+
+                            }
+
+                            htsql = "";
+                            htsql = @"
+                                UPDATE NPS_DES_ProfOutputCut_ListS SET IfGrant = NULL WHERE ID = '" + GrantListBoTwo[i]["ListSID"] + "'";
+                            dalsql.Session.Execute(htsql);
+
+
+                        }
+                        GrantListBo.Delete();
+                        GrantListBoTwo.Delete();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                return e.ToString();
+            }
+            return "";
+        }
+
+        //删除时回退产值状态 new
+        public string DeleteProfBonusV3(string ID)
+        {
+            try
+            {
+                Power.Business.IBusinessOperate grantBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant");//项目专业产值支取
+                Power.Business.IBusinessList GrantBo = grantBo.FindAll("ID='" + ID + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                if (GrantBo.Count > 0)
+                {
+                    Power.Business.IBusinessOperate grantOneBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant_HumList");//项目专业产值支取子表1
+                    Power.Business.IBusinessList GrantOneBoList = grantOneBo.FindAll("FID='" + ID + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                    if (GrantOneBoList.Count > 0)
+                    {
+                        for (int i = 0; i < GrantOneBoList.Count; i++)
+                        {
+                            Power.Business.IBusinessOperate grantTwoBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant_HumList_SubDetail");//项目专业产值支取子表2
+                            Power.Business.IBusinessList GrantTwoBoList = grantTwoBo.FindAll("FID='" + GrantOneBoList[i]["ID"] + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                            if (GrantTwoBoList.Count > 0)
+                            {
+                                for (int j = 0; j < GrantTwoBoList.Count; j++)
+                                {
+                                    Power.Business.IBusinessOperate Sb = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ThreeDimensional_ListS");
+                                    Power.Business.IBusinessList SbList2 = Sb.FindAll(" ID = '" + GrantTwoBoList[j]["ListSID"] + "' ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                                    //SbList2[0].SetItem("IfGrant", null);//项目名称
+                                    //SbList2[0].Save(System.ComponentModel.DataObjectMethodType.Update);
+
+
+                                    string htsql = "";
+                                    XCode.DataAccessLayer.DAL dalsql = XCode.DataAccessLayer.DAL.Create();
+                                    string sSQL = "";
+                                    sSQL = "select isnull(StatusCode,'') as StatusCode from  NPS_DES_ThreeDimensional_ListS WHERE ID = '" + GrantTwoBoList[j]["ListSID"] + "' ";
+                                    System.Data.DataTable dt2 = dalsql.Session.Query(sSQL).Tables[0];
+                                    if (dt2.Rows.Count > 0)
+                                    {
+                                        if (dt2.Rows[0]["StatusCode"].ToString().Equals("正在支取") || dt2.Rows[0]["StatusCode"].ToString().Equals(""))
+                                        {
+                                            htsql = "";
+                                            htsql = @"UPDATE NPS_DES_ThreeDimensional_ListS SET StatusCode = '' WHERE ID = '" + GrantTwoBoList[j]["ListSID"] + "'";
+                                            dalsql.Session.Execute(htsql);
+                                        }
+                                        else if (dt2.Rows[0]["StatusCode"].ToString().Equals("正在增补"))
+                                        {
+                                            htsql = "";
+                                            htsql = @"UPDATE NPS_DES_ThreeDimensional_ListS SET StatusCode = '待增补' WHERE ID = '" + GrantTwoBoList[j]["ListSID"] + "'";
+                                            dalsql.Session.Execute(htsql);
+                                        }
+
+                                    }
+
+
+                                }
+                                //GrantTwoBoList.Delete();
+
+                            }
+                        }
+                        //GrantOneBoList.Delete();
+                    }
+                    XCode.DataAccessLayer.DAL dsSQL = XCode.DataAccessLayer.DAL.Create();
+                    string SQL = "";
+                    SQL = @" delete from NPS_DES_ProjectOutputGrant_HumList_SubDetail  where fid in (select ID from NPS_DES_ProjectOutputGrant_HumList where fid='"+ID+"')";
+                    dsSQL.Session.Execute(SQL);
+
+                    SQL = "";
+                    SQL = @"  delete from  NPS_DES_ProjectOutputGrant_HumList where fid='"+ID+"' ";
+                    dsSQL.Session.Execute(SQL);
+
+                }
+            }
+            catch (Exception e)
+            {
+                return e.ToString();
+            }
+            return "";
+        }
+
+        public string CutStatus(string ID)
+        {
+            try
+            {
+                Power.Business.IBusinessOperate grantBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant");//项目专业产值支取
+                Power.Business.IBusinessList GrantBo = grantBo.FindAll("ID='" + ID + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                if (GrantBo.Count > 0)
+                {
+                    Power.Business.IBusinessOperate grantOneBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant_HumList");//项目专业产值支取子表1
+                    Power.Business.IBusinessList GrantOneBoList = grantOneBo.FindAll("FID='" + ID + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                    if (GrantOneBoList.Count > 0)
+                    {
+                        for (int i = 0; i < GrantOneBoList.Count; i++)
+                        {
+                            Power.Business.IBusinessOperate grantTwoBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant_HumList_SubDetail");//项目专业产值支取子表2
+                            Power.Business.IBusinessList GrantTwoBoList = grantTwoBo.FindAll("FID='" + GrantOneBoList[i]["ID"] + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                            if (GrantTwoBoList.Count > 0)
+                            {
+                                for (int j = 0; j < GrantTwoBoList.Count; j++)
+                                {
+
+                                    Power.Business.IBusinessOperate Sb = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ThreeDimensional_ListS");
+                                    Power.Business.IBusinessList SbList2 = Sb.FindAll(" ID = '" + GrantTwoBoList[j]["ListSID"] + "' ", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+                                    if (SbList2.Count > 0)
+                                    {
+                                        /* 根据三维产值分解表的WBSID，获取完成比例最高的完成审批后互提资料单
+                                        XCode.DataAccessLayer.DAL dal1 = XCode.DataAccessLayer.DAL.Create();
+                                        string sql1 = "";
+                                        sql1 = "SELECT top 1 *  FROM NPS_DES_SubmitDocuOrder WHERE WBSID = '" + SbList2[0]["WBSID"] + "' and (Status =35 or Status =50)  order by ThisComScaleN desc";
+                                        System.Data.DataTable dt1 = dal1.Session.Query(sql1).Tables[0];
+                                        if (dt1.Rows.Count > 0)
+                                        {
+                                            if (Convert.ToDouble(dt1.Rows[0]["ThisComScaleN"]) < 100)
+                                            {
+                                                SbList2[0].SetItem("IfGrant", "部分占用");//项目名称
+                                                SbList2[0].Save(System.ComponentModel.DataObjectMethodType.Update);
+                                            }
+                                            else
+                                            {
+
+                                            }
+                                        }
+                                        */
+                                        if (SbList2[0]["StatusCode"].ToString().Equals(""))
+                                        {
+                                            SbList2[0].SetItem("StatusCode", "正在支取");
+                                        }
+                                        else if(SbList2[0]["StatusCode"].ToString().Equals("待增补"))
+                                        {
+                                            SbList2[0].SetItem("StatusCode", "正在增补");
+                                        }
+                                        
+                                        SbList2[0].Save(System.ComponentModel.DataObjectMethodType.Update);
+                                        //
+
+
+
+                                    }
+
+                                }
+
+
+                            }
+                        }
+
+                    }
+
+                }
+            }
+            catch (Exception e)
+            {
+                return e.ToString();
+            }
+            return "";
+
+        }
+
+        /*
+                根据专业施工图产值获取对应人员的专业产值
+                胡宁绘
+                */
+        public string GetProfBonus(string ID)
+        {
+            DeleteProfBonus(ID);
+            DataTable tblDatas = new DataTable("Datas");
+            tblDatas.Columns.Add("HumanID", Type.GetType("System.String"));//设计人ID
+            tblDatas.Columns.Add("HumanCode", Type.GetType("System.String"));//设计人编号
+            tblDatas.Columns.Add("HumanName", Type.GetType("System.String"));//设计人名称
+            tblDatas.Columns.Add("Bonus", Type.GetType("System.String"));//分配总产值
+            XCode.DataAccessLayer.DAL dal2 = XCode.DataAccessLayer.DAL.Create();
+            Power.Business.IBusinessOperate grantBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant");//项目专业产值支取
+            Power.Business.IBusinessList GrantBo = grantBo.FindAll("ID='" + ID + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+            if (GrantBo.Count > 0)
+            {
+                string sql2 = "";
+                sql2 = @"select * from view_ProfOutputCut WHERE HeadHumID = '" + GrantBo[0]["RegHumId"] + @"' AND ProfID = '" + GrantBo[0]["ProfID"] + "' AND IfComplete = '已完成' AND IfIssue = '待支取'";
+                System.Data.DataTable dt2 = dal2.Session.Query(sql2).Tables[0];
+                if (dt2.Rows.Count > 0)
+                {
+                    for (int x = 0; x < dt2.Rows.Count; x++)
+                    {
+                        string sSQL = "select* from NPS_ENGPLAN_Project where IsEnableProfOutput = '是'  and ID='" + dt2.Rows[x]["EpsProjId"] + "'";
+                        System.Data.DataTable DsData = dal2.Session.Query(sSQL).Tables[0];
+                        if (DsData.Rows.Count > 0)//新项目
+                        {
+                            string IfGrant = "";
+                            if (dt2.Rows[x]["IfGrant"] == null)
+                                IfGrant = "";
+                            else
+                                IfGrant = dt2.Rows[x]["IfGrant"].ToString().Trim();
+
+                            if (IfGrant.Equals("") && (dt2.Rows[x]["PayBonus"].ToString().Equals("0") && dt2.Rows[x]["PayBonusRate"].ToString().Equals("0")))
+                            {
+                                Power.Business.IBaseBusiness sItem = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProjectOutputGrant_EpsList");
+                                sItem.SetItem("ID", Guid.NewGuid().ToString());
+                                sItem.SetItem("FID", ID);
+                                sItem.SetItem("AllBonus", dt2.Rows[x]["Bonus"]);
+                                sItem.SetItem("ThisApplyScale", dt2.Rows[x]["PeriodCompleteScale"]);
+                                sItem.SetItem("SubmitDocuOrderID", dt2.Rows[x]["SubmitDocuOrderID"].ToString());//关联互提资料单ID
+                                sItem.SetItem("ProjectID", dt2.Rows[x]["EpsProjId"].ToString());//项目ID
+                                sItem.SetItem("ProjectCode", dt2.Rows[x]["EpsProjCode"].ToString());//项目编号
+                                sItem.SetItem("ProjectName", dt2.Rows[x]["EpsProjName"].ToString());//项目名称
+                                sItem.SetItem("HumanID", dt2.Rows[x]["DesHumanID"].ToString());//人员ID
+                                sItem.SetItem("HumanCode", dt2.Rows[x]["DesHumanCode"].ToString());//人员编号
+                                sItem.SetItem("HumanName", dt2.Rows[x]["DesHumanName"].ToString());//人员名称
+                                sItem.SetItem("Bonus", dt2.Rows[x]["AllocationBonus"].ToString());//产值
+                                sItem.SetItem("SubID", dt2.Rows[x]["SubID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["SubID"].ToString());//子项ID
+                                sItem.SetItem("SubCode", dt2.Rows[x]["SubCode"].ToString());//子项编号
+                                sItem.SetItem("SubName", dt2.Rows[x]["SubName"].ToString());//子项名称
+                                sItem.SetItem("TaskID", dt2.Rows[x]["TaskID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["TaskID"].ToString());//任务ID
+                                sItem.SetItem("TaskCode", dt2.Rows[x]["TaskCode"].ToString());//任务编号
+                                sItem.SetItem("TaskName", dt2.Rows[x]["TaskName"].ToString());//任务名称
+                                sItem.SetItem("TaskType", dt2.Rows[x]["TaskType"].ToString());//任务类型
+                                sItem.SetItem("Rate", dt2.Rows[x]["Rate"].ToString());//产值比例
+                                sItem.SetItem("DesignRate", dt2.Rows[x]["DesignRate"].ToString());//任务比例
+                                sItem.SetItem("WBSID", dt2.Rows[x]["WBSID"].ToString());//WBSID
+                                sItem.SetItem("IfGrant", IfGrant);//是否支取
+                                sItem.SetItem("Type", dt2.Rows[x]["Type"].ToString());//设校审类型
+                                sItem.SetItem("HeadHumID", dt2.Rows[x]["HeadHumID"].ToString());//专业负责人ID
+                                sItem.SetItem("HeadHumCode", dt2.Rows[x]["HeadHumCode"].ToString());//专业负责人编号
+                                sItem.SetItem("HeadHumName", dt2.Rows[x]["HeadHumName"].ToString());//专业负责人名称
+                                sItem.SetItem("ListSID", dt2.Rows[x]["ProfOutputCutLSID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["ProfOutputCutLSID"].ToString());//专业施工图产值分解孙表ID
+                                sItem.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                                XCode.DataAccessLayer.DAL dalsql1 = XCode.DataAccessLayer.DAL.Create();
+                                string cpsql = "";
+                                cpsql = "UPDATE NPS_DES_ProfOutputCut_ListS SET StatusCode  = '正在支取' WHERE ID = '" + dt2.Rows[x]["ProfOutputCutLSID"] + "'";
+                                dalsql1.Session.Execute(cpsql);
+                            }
+                            else
+                            {
+                                Power.Business.IBaseBusiness sItem = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProjectOutputGrant_EpsList");
+                                sItem.SetItem("ID", Guid.NewGuid().ToString());
+                                sItem.SetItem("FID", ID);
+                                sItem.SetItem("AllBonus", dt2.Rows[x]["Bonus"]);
+                                sItem.SetItem("ThisApplyScale", dt2.Rows[x]["PeriodCompleteScale"]);
+                                sItem.SetItem("SubmitDocuOrderID", dt2.Rows[x]["SubmitDocuOrderID"].ToString());//关联互提资料单ID
+                                sItem.SetItem("ProjectID", dt2.Rows[x]["EpsProjId"].ToString());//项目ID
+                                sItem.SetItem("ProjectCode", dt2.Rows[x]["EpsProjCode"].ToString());//项目编号
+                                sItem.SetItem("ProjectName", dt2.Rows[x]["EpsProjName"].ToString());//项目名称
+                                sItem.SetItem("HumanID", dt2.Rows[x]["DesHumanID"].ToString());//人员ID
+                                sItem.SetItem("HumanCode", dt2.Rows[x]["DesHumanCode"].ToString());//人员编号
+                                sItem.SetItem("HumanName", dt2.Rows[x]["DesHumanName"].ToString());//人员名称
+                                sItem.SetItem("Bonus", dt2.Rows[x]["AllocationBonus"].ToString());//产值
+                                sItem.SetItem("SubID", dt2.Rows[x]["SubID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["SubID"].ToString());//子项ID
+                                sItem.SetItem("SubCode", dt2.Rows[x]["SubCode"].ToString());//子项编号
+                                sItem.SetItem("SubName", dt2.Rows[x]["SubName"].ToString());//子项名称
+                                sItem.SetItem("TaskID", dt2.Rows[x]["TaskID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["TaskID"].ToString());//任务ID
+                                sItem.SetItem("TaskCode", dt2.Rows[x]["TaskCode"].ToString());//任务编号
+                                sItem.SetItem("TaskName", dt2.Rows[x]["TaskName"].ToString());//任务名称
+                                sItem.SetItem("TaskType", dt2.Rows[x]["TaskType"].ToString());//任务类型
+                                sItem.SetItem("Rate", dt2.Rows[x]["Rate"].ToString());//产值比例
+                                sItem.SetItem("DesignRate", dt2.Rows[x]["DesignRate"].ToString());//任务比例
+                                sItem.SetItem("WBSID", dt2.Rows[x]["WBSID"].ToString());//WBSID
+                                sItem.SetItem("IfGrant", IfGrant);//是否支取
+                                sItem.SetItem("Type", dt2.Rows[x]["Type"].ToString());//设校审类型
+                                sItem.SetItem("HeadHumID", dt2.Rows[x]["HeadHumID"].ToString());//专业负责人ID
+                                sItem.SetItem("HeadHumCode", dt2.Rows[x]["HeadHumCode"].ToString());//专业负责人编号
+                                sItem.SetItem("HeadHumName", dt2.Rows[x]["HeadHumName"].ToString());//专业负责人名称
+                                sItem.SetItem("ListSID", dt2.Rows[x]["ProfOutputCutLSID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["ProfOutputCutLSID"].ToString());//专业施工图产值分解孙表ID
+                                sItem.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                                XCode.DataAccessLayer.DAL dalsql1 = XCode.DataAccessLayer.DAL.Create();
+                                string cpsql = "";
+                                cpsql = "UPDATE NPS_DES_ProfOutputCut_ListS SET StatusCode  = '正在支取' WHERE ID = '" + dt2.Rows[x]["ProfOutputCutLSID"] + "'";
+                                dalsql1.Session.Execute(cpsql);
+                            }
+                        }
+                        else//老项目
+                        {
+                            Power.Business.IBaseBusiness sItem = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProjectOutputGrant_EpsList");
+                            sItem.SetItem("ID", Guid.NewGuid().ToString());
+                            sItem.SetItem("FID", ID);
+                            sItem.SetItem("AllBonus", dt2.Rows[x]["Bonus"]);
+                            sItem.SetItem("ThisApplyScale", dt2.Rows[x]["PeriodCompleteScale"]);
+                            sItem.SetItem("SubmitDocuOrderID", dt2.Rows[x]["SubmitDocuOrderID"].ToString());//关联互提资料单ID
+                            sItem.SetItem("ProjectID", dt2.Rows[x]["EpsProjId"].ToString());//项目ID
+                            sItem.SetItem("ProjectCode", dt2.Rows[x]["EpsProjCode"].ToString());//项目编号
+                            sItem.SetItem("ProjectName", dt2.Rows[x]["EpsProjName"].ToString());//项目名称
+                            sItem.SetItem("HumanID", dt2.Rows[x]["DesHumanID"].ToString());//人员ID
+                            sItem.SetItem("HumanCode", dt2.Rows[x]["DesHumanCode"].ToString());//人员编号
+                            sItem.SetItem("HumanName", dt2.Rows[x]["DesHumanName"].ToString());//人员名称
+                            sItem.SetItem("Bonus", dt2.Rows[x]["AllocationBonus"].ToString());//产值
+                            sItem.SetItem("SubID", dt2.Rows[x]["SubID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["SubID"].ToString());//子项ID
+                            sItem.SetItem("SubCode", dt2.Rows[x]["SubCode"].ToString());//子项编号
+                            sItem.SetItem("SubName", dt2.Rows[x]["SubName"].ToString());//子项名称
+                            sItem.SetItem("TaskID", dt2.Rows[x]["TaskID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["TaskID"].ToString());//任务ID
+                            sItem.SetItem("TaskCode", dt2.Rows[x]["TaskCode"].ToString());//任务编号
+                            sItem.SetItem("TaskName", dt2.Rows[x]["TaskName"].ToString());//任务名称
+                            sItem.SetItem("TaskType", dt2.Rows[x]["TaskType"].ToString());//任务类型
+                            sItem.SetItem("Rate", dt2.Rows[x]["Rate"].ToString());//产值比例
+                            sItem.SetItem("DesignRate", dt2.Rows[x]["DesignRate"].ToString());//任务比例
+                            sItem.SetItem("WBSID", dt2.Rows[x]["WBSID"].ToString());//WBSID
+                            sItem.SetItem("IfGrant", dt2.Rows[x]["IfGrant"]==null?"": dt2.Rows[x]["IfGrant"].ToString());//是否支取
+                            sItem.SetItem("Type", dt2.Rows[x]["Type"].ToString());//设校审类型
+                            sItem.SetItem("HeadHumID", dt2.Rows[x]["HeadHumID"].ToString());//专业负责人ID
+                            sItem.SetItem("HeadHumCode", dt2.Rows[x]["HeadHumCode"].ToString());//专业负责人编号
+                            sItem.SetItem("HeadHumName", dt2.Rows[x]["HeadHumName"].ToString());//专业负责人名称
+                            sItem.SetItem("ListSID", dt2.Rows[x]["ProfOutputCutLSID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["ProfOutputCutLSID"].ToString());//专业施工图产值分解孙表ID
+                            sItem.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                            XCode.DataAccessLayer.DAL dalsql1 = XCode.DataAccessLayer.DAL.Create();
+                            string cpsql = "";
+                            cpsql = "UPDATE NPS_DES_ProfOutputCut_ListS SET IfGrant  = '占用' WHERE ID = '" + dt2.Rows[x]["ProfOutputCutLSID"] + "'";
+                            dalsql1.Session.Execute(cpsql);
+
+
+                        }
+                    }
+                }
+            }
+
+
+            // 数据已插入 进行根据人员进行分组
+            XCode.DataAccessLayer.DAL dal3 = XCode.DataAccessLayer.DAL.Create();
+            string sql3 = "";
+            sql3 = @"
+                         SELECT HumanID,HumanCode,HumanName,SUM(Bonus) Bonus FROM NPS_DES_ProjectOutputGrant_EpsList
+                         WHERE FID = '" + ID + @"'
+                         GROUP BY HumanID,HumanCode,HumanName
+                         ";
+            System.Data.DataTable dt3 = dal3.Session.Query(sql3).Tables[0];
+            if (dt3.Rows.Count > 0)
+            {
+                for (int y = 0; y < dt3.Rows.Count; y++)
+                {
+                    tblDatas.Rows.Add(new object[] {
+                        dt3.Rows[y]["HumanID"], dt3.Rows[y]["HumanCode"], dt3.Rows[y]["HumanName"],
+                        double.Parse(dt3.Rows[y]["Bonus"].ToString())});
+                }
+            }
+            foreach (DataRow dataRows in tblDatas.Rows)
+            {
+                Power.Business.IBaseBusiness sItemList = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProjectOutputGrant_HumList");
+                sItemList.SetItem("ID", Guid.NewGuid().ToString());
+                sItemList.SetItem("FID", ID);
+                sItemList.SetItem("HumanID", dataRows["HumanID"].ToString());//人员ID
+                sItemList.SetItem("HumanCode", dataRows["HumanCode"].ToString());//人员编号
+                sItemList.SetItem("HumanName", dataRows["HumanName"].ToString());//人员名称
+                sItemList.SetItem("Bonus", dataRows["Bonus"].ToString());//产值
+                sItemList.Save(System.ComponentModel.DataObjectMethodType.Insert);
+            }
+            OutputControl outputControl = new OutputControl();
+            outputControl.GetZB(ID);
+            return "";
+        }
+
+        //lx 新增三维产值获取
+
+        public string GetProfBonusV3(string ID)
+        {
+            DeleteProfBonusV3(ID);
+            Power.Business.IBusinessOperate grantBo = Power.Business.BusinessFactory.CreateBusinessOperate("NPS_DES_ProjectOutputGrant");//项目专业产值支取
+            Power.Business.IBusinessList GrantBo = grantBo.FindAll("ID='" + ID + "'", "", "", 0, 0, Power.Business.SearchFlag.IgnoreRight);
+            if (GrantBo.Count > 0)
+            {
+
+                XCode.DataAccessLayer.DAL dal2 = XCode.DataAccessLayer.DAL.Create();
+                string sql2 = "";
+                /*sql2 = "select * from view_ProfOutputCutV3 WHERE ThreeDHeadHumID = '" + GrantBo[0]["RegHumId"] + "' AND ProfID = '" + GrantBo[0]["ProfID"] + "' AND IfComplete = '已完成' AND DesHumanID='" + dt3.Rows[y]["DesHumanID"] + "' AND IfIssue = '待支取' and 1 = (case when Type <> '设计' and PeriodCompleteScale=100 then 1 else 0 end) UNION ALL select top 1 * from view_ProfOutputCutV3 WHERE ThreeDHeadHumID = '" + GrantBo[0]["RegHumId"] + "' AND ProfID = '" + GrantBo[0]["ProfID"] + "' AND IfComplete = '已完成' AND DesHumanID='" + dt3.Rows[y]["DesHumanID"] + "' AND IfIssue = '待支取' and 1 = (case when Type = '设计' then 1 else 0 end) order by PeriodCompleteScale desc";*/
+                sql2 = "select * from view_ProfOutputCutV3 WHERE ThreeDHeadHumID = '" + GrantBo[0]["RegHumId"] + "' AND ProfID = '" + GrantBo[0]["ProfID"] + "' AND IfComplete = '已完成'  AND IfIssue = '待支取'";
+                System.Data.DataTable dt2 = dal2.Session.Query(sql2).Tables[0];
+
+                //sql3 -- 获取人员总产值信息
+                XCode.DataAccessLayer.DAL dal3 = XCode.DataAccessLayer.DAL.Create();
+                string sql3 = "";
+
+                sql3 = "select Sum(AllocationBonus) as AllocationBonus,DesHumanID,DesHumanName,DesHumanCode from view_ProfOutputCutV3 WHERE " +
+                    "ThreeDHeadHumID = '" + GrantBo[0]["RegHumId"] + "' AND ProfID = '" + GrantBo[0]["ProfID"] + "' AND IfComplete = '已完成' " +
+                    "AND IfIssue = '待支取' group by DesHumanID,DesHumanName,DesHumanCode";
+
+                /*三维产值获取子表 人员可支产值汇总--由两个部分拼接而成
+                    1.非设计类，完成比例达100%
+                    2.设计类，
+                */
+                /*
+                 sql3 = "SELECT Sum(AllocationBonus) as AllocationBonus,DesHumanID,DesHumanName,DesHumanCode FROM (select Sum(AllocationBonus) as AllocationBonus,DesHumanID,DesHumanName,DesHumanCode from view_ProfOutputCutV3 WHERE ThreeDHeadHumID = '" + GrantBo[0]["RegHumId"] + "' AND ProfID = '" + GrantBo[0]["ProfID"] + "' AND IfComplete = '已完成' AND IfIssue = '待支取' and 1 = (case when Type <> '设计' and PeriodCompleteScale=100 then 1 else 0 end) group by DesHumanID,DesHumanName,DesHumanCode UNION All select Sum(AllocationBonus) as AllocationBonus,DesHumanID,DesHumanName,DesHumanCode from view_ProfOutputCutV3 WHERE ThreeDHeadHumID = '" + GrantBo[0]["RegHumId"] + "' AND ProfID = '" + GrantBo[0]["ProfID"] + "' AND IfComplete = '已完成' AND IfIssue = '待支取' and 1 = (case when Type = '设计' then 1 else 0 end) group by DesHumanID,DesHumanName,DesHumanCode)AA group by DesHumanID,DesHumanName,DesHumanCode";
+                */
+
+                System.Data.DataTable dt3 = dal3.Session.Query(sql3).Tables[0];
+                if (dt3.Rows.Count > 0)
+                {
+                    for (int y = 0; y < dt3.Rows.Count; y++)
+                    {
+                        string NewID = Guid.NewGuid().ToString();//子表ID
+                        Power.Business.IBaseBusiness sItem = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProjectOutputGrant_HumList");
+                        sItem.SetItem("ID", NewID); //新ID
+                        sItem.SetItem("FID", ID);
+                        sItem.SetItem("HumanID", dt3.Rows[y]["DesHumanID"].ToString());//人员ID
+                        sItem.SetItem("HumanCode", dt3.Rows[y]["DesHumanCode"].ToString());//人员编号
+                        sItem.SetItem("HumanName", dt3.Rows[y]["DesHumanName"].ToString());//人员名称
+                        sItem.SetItem("Bonus", dt3.Rows[y]["AllocationBonus"].ToString());//产值
+                        sItem.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                        
+                        if (dt2.Rows.Count > 0)
+                        {
+                            for (int x = 0; x < dt2.Rows.Count; x++)
+                            {
+                                if (dt2.Rows[x]["DesHumanID"].ToString().ToUpper().Trim().Equals(dt3.Rows[y]["DesHumanID"].ToString().ToUpper().Trim()))
+                                {
+                                    string IfGrant = "";
+                                    if (dt2.Rows[x]["IfGrant"] == null)
+                                        IfGrant = "";
+                                    else
+                                        IfGrant = dt2.Rows[x]["IfGrant"].ToString().Trim();
+
+                                    if (IfGrant.Equals("") && (dt2.Rows[x]["PayBonus"].ToString().Equals("0") && dt2.Rows[x]["PayBonusRate"].ToString().Equals("0")))
+                                    {
+                                        Power.Business.IBaseBusiness sItems = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProjectOutputGrant_HumList_SubDetail");
+                                        sItems.SetItem("ID", Guid.NewGuid().ToString());
+                                        sItems.SetItem("FID", NewID);
+                                        sItems.SetItem("TotalBonus", dt2.Rows[x]["Bonus"]);
+                                        //  sItems.SetItem("TotalBonus", dt2.Rows[x]["Bonus"]);
+                                        //  sItems.SetItem("TotalBonus", dt2.Rows[x]["Bonus"]);
+                                        sItems.SetItem("BonusScale", dt2.Rows[x]["PeriodCompleteScale"]);//本次完成比例
+                                        sItems.SetItem("SubmitDocuOrderID", dt2.Rows[x]["SubmitDocuOrderID"].ToString());//关联互提资料单ID
+                                        sItems.SetItem("ProjectID", dt2.Rows[x]["EpsProjId"].ToString());//项目ID
+                                        sItems.SetItem("ProjectCode", dt2.Rows[x]["EpsProjCode"].ToString());//项目编号
+                                        sItems.SetItem("ProjectName", dt2.Rows[x]["EpsProjName"].ToString());//项目名称
+                                        sItems.SetItem("HumanID", dt2.Rows[x]["DesHumanID"].ToString());//人员ID
+                                        sItems.SetItem("HumanCode", dt2.Rows[x]["DesHumanCode"].ToString());//人员编号
+                                        sItems.SetItem("HumanName", dt2.Rows[x]["DesHumanName"].ToString());//人员名称
+                                        sItems.SetItem("Bonus", dt2.Rows[x]["AllocationBonus"].ToString());//产值
+                                        sItems.SetItem("SubID", dt2.Rows[x]["SubID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["SubID"].ToString());//子项ID
+                                        sItems.SetItem("SubCode", dt2.Rows[x]["SubCode"].ToString());//子项编号
+                                        sItems.SetItem("SubName", dt2.Rows[x]["SubName"].ToString());//子项名称
+                                        sItems.SetItem("TaskID", dt2.Rows[x]["TaskID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["TaskID"].ToString());//任务ID
+                                        sItems.SetItem("TaskCode", dt2.Rows[x]["TaskCode"].ToString());//任务编号
+                                        sItems.SetItem("TaskName", dt2.Rows[x]["TaskName"].ToString());//任务名称
+                                        sItems.SetItem("TaskType", dt2.Rows[x]["TaskType"].ToString());//任务类型
+                                        sItems.SetItem("Rate", dt2.Rows[x]["Rate"].ToString());//产值比例
+                                        sItems.SetItem("DesignRate", dt2.Rows[x]["DesignRate"].ToString());//任务比例
+                                        sItems.SetItem("WBSID", dt2.Rows[x]["WBSID"].ToString());//WBSID
+                                        sItems.SetItem("IfGrant", dt2.Rows[x]["IfGrant"] == null ? "" : dt2.Rows[x]["IfGrant"].ToString());//是否支取
+                                        sItems.SetItem("Type", dt2.Rows[x]["Type"].ToString());//设校审类型
+                                        sItems.SetItem("ThreeDHeadHumID", dt2.Rows[x]["ThreeDHeadHumID"].ToString());//专业负责人ID
+                                        sItems.SetItem("ThreeDHeadHumCode", dt2.Rows[x]["ThreeDHeadHumCode"].ToString());//专业负责人编号
+                                        sItems.SetItem("ThreeDHeadHumName", dt2.Rows[x]["ThreeDHeadHumName"].ToString());//专业负责人名称
+                                        sItems.SetItem("ListSID", dt2.Rows[x]["ProfOutputCutLSID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["ProfOutputCutLSID"].ToString());//专业施工图产值分解孙表ID
+                                        sItems.Save(System.ComponentModel.DataObjectMethodType.Insert);
+
+                                    }
+                                    else
+                                    {
+                                        Power.Business.IBaseBusiness sItems = Power.Business.BusinessFactory.CreateBusiness("NPS_DES_ProjectOutputGrant_HumList_SubDetail");
+                                        sItems.SetItem("ID", Guid.NewGuid().ToString());
+                                        sItems.SetItem("FID", NewID);
+                                        sItems.SetItem("TotalBonus", dt2.Rows[x]["Bonus"]);
+                                        //  sItems.SetItem("TotalBonus", dt2.Rows[x]["Bonus"]);
+                                        //  sItems.SetItem("TotalBonus", dt2.Rows[x]["Bonus"]);
+                                        sItems.SetItem("BonusScale", dt2.Rows[x]["PeriodCompleteScale"]);//本次完成比例
+                                        sItems.SetItem("SubmitDocuOrderID", dt2.Rows[x]["SubmitDocuOrderID"].ToString());//关联互提资料单ID
+                                        sItems.SetItem("ProjectID", dt2.Rows[x]["EpsProjId"].ToString());//项目ID
+                                        sItems.SetItem("ProjectCode", dt2.Rows[x]["EpsProjCode"].ToString());//项目编号
+                                        sItems.SetItem("ProjectName", dt2.Rows[x]["EpsProjName"].ToString());//项目名称
+                                        sItems.SetItem("HumanID", dt2.Rows[x]["DesHumanID"].ToString());//人员ID
+                                        sItems.SetItem("HumanCode", dt2.Rows[x]["DesHumanCode"].ToString());//人员编号
+                                        sItems.SetItem("HumanName", dt2.Rows[x]["DesHumanName"].ToString());//人员名称
+                                        sItems.SetItem("Bonus", dt2.Rows[x]["AllocationBonus"].ToString());//产值
+                                        sItems.SetItem("SubID", dt2.Rows[x]["SubID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["SubID"].ToString());//子项ID
+                                        sItems.SetItem("SubCode", dt2.Rows[x]["SubCode"].ToString());//子项编号
+                                        sItems.SetItem("SubName", dt2.Rows[x]["SubName"].ToString());//子项名称
+                                        sItems.SetItem("TaskID", dt2.Rows[x]["TaskID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["TaskID"].ToString());//任务ID
+                                        sItems.SetItem("TaskCode", dt2.Rows[x]["TaskCode"].ToString());//任务编号
+                                        sItems.SetItem("TaskName", dt2.Rows[x]["TaskName"].ToString());//任务名称
+                                        sItems.SetItem("TaskType", dt2.Rows[x]["TaskType"].ToString());//任务类型
+                                        sItems.SetItem("Rate", dt2.Rows[x]["Rate"].ToString());//产值比例
+                                        sItems.SetItem("DesignRate", dt2.Rows[x]["DesignRate"].ToString());//任务比例
+                                        sItems.SetItem("WBSID", dt2.Rows[x]["WBSID"].ToString());//WBSID
+                                        sItems.SetItem("IfGrant", dt2.Rows[x]["IfGrant"] == null ? "" : dt2.Rows[x]["IfGrant"].ToString());//是否支取
+                                        sItems.SetItem("Type", dt2.Rows[x]["Type"].ToString());//设校审类型
+                                        sItems.SetItem("ThreeDHeadHumID", dt2.Rows[x]["ThreeDHeadHumID"].ToString());//专业负责人ID
+                                        sItems.SetItem("ThreeDHeadHumCode", dt2.Rows[x]["ThreeDHeadHumCode"].ToString());//专业负责人编号
+                                        sItems.SetItem("ThreeDHeadHumName", dt2.Rows[x]["ThreeDHeadHumName"].ToString());//专业负责人名称
+                                        sItems.SetItem("ListSID", dt2.Rows[x]["ProfOutputCutLSID"] == null ? "00000000-0000-0000-0000-000000000000" : dt2.Rows[x]["ProfOutputCutLSID"].ToString());//专业施工图产值分解孙表ID
+                                        sItems.Save(System.ComponentModel.DataObjectMethodType.Insert);
+                                    }
+                                }                              
+                            }
+                        }
+                    }
+                }
+                CutStatus(ID);
+            }
+            OutputControl outputControl = new OutputControl();
+            outputControl.GetZB3V(ID);
+            return "";
+        }
+
+        //调整明细审批后事件
+        public string UpTZMXStatusCode(string ID, string originFID)
+        {
+            //查询调整明细中的子项明细信息
+            XCode.DataAccessLayer.DAL dal1 = XCode.DataAccessLayer.DAL.Create();
+            string sql1 = "";
+            sql1 = "select * from NPS_DES_ProfOutputCutAdjust_List where fid='" + ID + "' ";
+            System.Data.DataTable dt1 = dal1.Session.Query(sql1).Tables[0];//调整明细每一个子项信息
+
+            sql1 = "";
+            sql1 = "select * from NPS_DES_ProfOutputCut_List where fid='" + originFID + "' ";
+            System.Data.DataTable dt2 = dal1.Session.Query(sql1).Tables[0];//产值明细的每一个子项信息
+            for (int x = 0; x < dt2.Rows.Count; x++)//循环产值明细中的每一个子项，每一个子项的每一个专业与调整明细中的产值明细的每一个子项，每一个子项中的每一个专业，是否产值比例相同
+            {
+                for (int i = 0; i < dt1.Rows.Count; i++)//调整明细每一个子项信息
+                {
+                    if (dt2.Rows[x]["SubCode"].ToString().Equals(dt1.Rows[i]["SubCode"].ToString()))//通过子项编号对应
+                    {
+                        //根据此时的id找到所有任务，再根据任务对应
+                        sql1 = "";
+                        sql1 = "select * from NPS_DES_ProfOutputCutAdjust_ListS where fid='" + dt1.Rows[0]["ID"].ToString() + "' ";
+                        System.Data.DataTable dt3 = dal1.Session.Query(sql1).Tables[0];//调整明细中的任务
+
+
+                        sql1 = "";
+                        sql1 = "select * from NPS_DES_ProfOutputCut_ListS where fid='" + dt2.Rows[0]["ID"].ToString() + "' ";
+                        System.Data.DataTable dt4 = dal1.Session.Query(sql1).Tables[0];//产值明细中的任务
+
+                        for (int j = 0; j < dt3.Rows.Count; j++)//循环调整明细中的任务
+                        {
+                            for (int k = 0; k < dt4.Rows.Count; k++)//循环产值明细中的任务
+                            {
+                                if (dt3.Rows[j]["WBSID"].ToString().Equals(dt4.Rows[k]["WBSID"].ToString()))//如果存在wbsid相同的记录，则判断产值比例是否相同
+                                {
+                                    if (!dt3.Rows[j]["Rate"].ToString().Equals(dt4.Rows[k]["Rate"].ToString()))//如果不等于原有值，则将statuscode=待增补
+                                    {
+                                        sql1 = "";
+                                        sql1 = "update NPS_DES_ProfOutputCut_ListS set StatusCode = '待增补' where ID='" + dt4.Rows[k]["ID"].ToString() + "' ";
+                                        dal1.Session.Execute(sql1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return "";
+        }
+
+
+
+        //比例调整明细审批后事件
+        public string UpBLTZMXStatusCode(string ID, string originFID)
+        {
+            //查询调整明细中的子项明细信息
+            XCode.DataAccessLayer.DAL dal1 = XCode.DataAccessLayer.DAL.Create();
+            string sql1 = "";
+            sql1 = "select * from NPS_DES_ProfOutputCutScaleAdjust_List where fid='" + ID + "' ";
+            System.Data.DataTable dt1 = dal1.Session.Query(sql1).Tables[0];//比例调整明细每一个子项信息
+
+            sql1 = "";
+            sql1 = "select * from NPS_DES_ProfOutputCut_List where fid='" + originFID + "' ";
+            System.Data.DataTable dt2 = dal1.Session.Query(sql1).Tables[0];//产值明细的每一个子项信息
+            for (int x = 0; x < dt2.Rows.Count; x++)//循环产值明细中的每一个子项，每一个子项的每一个专业与调整明细中的产值明细的每一个子项，每一个子项中的每一个专业，是否产值比例相同
+            {
+                for (int i = 0; i < dt1.Rows.Count; i++)//调整明细每一个子项信息
+                {
+                    if (dt2.Rows[x]["SubCode"].ToString().Equals(dt1.Rows[i]["SubCode"].ToString()))//通过子项编号对应
+                    {
+                        //根据此时的id找到所有任务，再根据任务对应
+                        sql1 = "";
+                        sql1 = "select * from NPS_DES_ProfOutputCutScaleAdjust_ListS where fid='" + dt1.Rows[0]["ID"].ToString() + "' ";
+                        System.Data.DataTable dt3 = dal1.Session.Query(sql1).Tables[0];//比例调整明细中的任务
+
+
+                        sql1 = "";
+                        sql1 = "select * from NPS_DES_ProfOutputCut_ListS where fid='" + dt2.Rows[0]["ID"].ToString() + "' ";
+                        System.Data.DataTable dt4 = dal1.Session.Query(sql1).Tables[0];//产值明细中的任务
+
+                        for (int j = 0; j < dt3.Rows.Count; j++)//循环调整明细中的任务
+                        {
+                            for (int k = 0; k < dt4.Rows.Count; k++)//循环产值明细中的任务
+                            {
+                                if (dt3.Rows[j]["WBSID"].ToString().Equals(dt4.Rows[k]["WBSID"].ToString()))//如果存在wbsid相同的记录，则判断产值比例是否相同
+                                {
+                                    if (!dt3.Rows[j]["Rate"].ToString().Equals(dt4.Rows[k]["Rate"].ToString()))//如果不等于原有值，则将statuscode=待增补
+                                    {
+                                        sql1 = "";
+                                        sql1 = "update NPS_DES_ProfOutputCut_ListS set StatusCode = '待增补' where ID='" + dt4.Rows[k]["ID"].ToString() + "' ";
+                                        dal1.Session.Execute(sql1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return "";
         }
 
 
@@ -358,62 +1344,8 @@ namespace Power.SPMEMS.Services
 
 
 
+
+            
         
-        public DataTable ContractML(string Year)
-        {
-            string SQL = @"select *,concat(round((ML/ReML) * 100,2),'' , '%') as MLpercentage from (
-                                select case when A.ConType='HJ' then '环境'
-                                                when A.ConType='QT' then '其他'
-                                                when A.ConType='ZW' then '职卫非煤'
-                                                when A.ConType='ZM' then '职卫煤矿' end ConType,A.year,A.ConMoney,B.InfoFee,B.PrivRefund,isnull(A.ConMoney,0)-isnull(B.InfoFee,0)-isnull(B.PrivRefund,0) as ActSR,C.Tax,isnull(D.Money,0) as PSF,
-                                isnull(E.SubConMoney,0) SubConMoney,F.DeductionAmount,isnull(A.ConMoney,0)-isnull(B.InfoFee,0)-isnull(B.PrivRefund,0)-isnull(C.Tax,0)-isnull(D.Money,0)-isnull(E.SubConMoney,0)-isnull(F.DeductionAmount,0) as ML from
-                                (select ConType,Year(RegDate) year,sum(isnull(ConMoney,0)) as ConMoney from NPS_CON_RevenueContract group by ConType,Year(RegDate)) A
-                                left join
-                                (
-                                    select sum(isnull(InfoFee,0)) as InfoFee,sum(isnull(PrivRefund,0)) as PrivRefund,Year(M.RegDate) as year,N.ConType from NPS_CON_CloseApplicatio M
-                                        left join NPS_CON_RevenueContract N on M.ConID=N.ID group by Year(M.RegDate),N.ConType
-                                ) B on A.year=B.year and A.ConType=B.ConType
-                                left join
-                                (
-                                    select sum(isnull(Tax,0)) as Tax,Year(M.RegDate) as year,N.ConType from NPS_CON_ContractInvoiceApplication M
-                                        left join NPS_CON_RevenueContract N on M.ConID=N.ID group by Year(M.RegDate),N.ConType  
-                                ) C on A.year=C.year and A.ConType=C.ConType
-                                left join
-                                (
-                                    select Year(P.RegDate) as year,P.ConType,sum(isnull(Money,0)) as Money from NPS_HFS_Other_List K
-                                    left join NPS_HFS_Other L on K.FID=L.ID
-                                    left join NPS_CON_RevenueContract P on L.ConID=P.ID where L.ConID is not null and K.FeeProject='专家评审费' group by Year(P.RegDate),P.ConType  
-                                ) D on A.year=D.year and A.ConType=D.ConType
-                                left join
-                                (
-                                    select sum(isnull(SubConMoney,0)) as SubConMoney,Year(M.RegDate) as year,N.ConType from NPS_CON_Subcontract M
-                                        left join NPS_CON_RevenueContract N on M.ConID=N.ID group by Year(M.RegDate),N.ConType  
-                                ) E on A.year=E.year and A.ConType=E.ConType
-                                left join
-                                (
-                                    select sum(isnull(DeductionAmount,0)) as DeductionAmount,Year(M.RegDate) as year,N.ConType from NPS_CON_RevenueContract_OtherExpend M
-                                        left join NPS_CON_RevenueContract N on M.ConID=N.ID group by Year(M.RegDate),N.ConType  
-                                ) F on A.year=F.year and A.ConType=F.ConType
-                            ) HH
-                            left join(
-                                (select 
-                                    A.year Reyear,A.ConMoney-B.InfoFee-B.PrivRefund-C.Tax-isnull(D.Money,0)-isnull(E.SubConMoney,0)-isnull(F.DeductionAmount,0) as ReML from 
-                                (select  Year(RegDate) year,sum(isnull(ConMoney,0)) as ConMoney from NPS_CON_RevenueContract group by Year(RegDate)) A
-                                left join(select sum(isnull(InfoFee,0)) as InfoFee,sum(isnull(PrivRefund,0)) as PrivRefund,Year(M.RegDate) as year from NPS_CON_CloseApplicatio M
-                                left join NPS_CON_RevenueContract N on M.ConID=N.ID group by Year(M.RegDate)) B on A.year=B.year 
-                                left join(select sum(isnull(Tax,0)) as Tax,Year(M.RegDate) as year from NPS_CON_ContractInvoiceApplication M
-                                    left join NPS_CON_RevenueContract N on M.ConID=N.ID group by Year(M.RegDate) ) C on A.year=C.year 
-                                left join(select Year(P.RegDate) as year,sum(isnull(Money,0)) as Money from NPS_HFS_Other_List K
-                                    left join NPS_HFS_Other L on K.FID=L.ID
-                                left join NPS_CON_RevenueContract P on L.ConID=P.ID where L.ConID is not null and K.FeeProject='专家评审费' group by Year(P.RegDate)) D on A.year=D.year  
-                                left join(select sum(isnull(SubConMoney,0)) as SubConMoney,Year(M.RegDate) as year from NPS_CON_Subcontract M
-                                    left join NPS_CON_RevenueContract N on M.ConID=N.ID group by Year(M.RegDate)) E on A.year=E.year
-                                left join(select sum(isnull(DeductionAmount,0)) as DeductionAmount,Year(M.RegDate) as year from NPS_CON_RevenueContract_OtherExpend M
-                                left join NPS_CON_RevenueContract N on M.ConID=N.ID group by Year(M.RegDate)) F on A.year=F.year) 
-                                ) X on X.Reyear = HH.year
-                            where year='" + Year + "'";
-            DataTable Dt = XCode.DataAccessLayer.DAL.QuerySQL(SQL);
-            return Dt;//返回的查询结果
-        }
     }
 }
